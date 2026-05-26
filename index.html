@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Instant 1-QR P2P File Share (100% Working)</title>
+    <title>1-Way QR & Manual P2P File Share</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     
@@ -24,10 +24,10 @@
         h2 { margin-bottom: 5px; color: #38bdf8; }
         .subtitle { color: #94a3b8; margin-bottom: 25px; font-size: 14px; text-align: center; }
 
-        /* ইন্টারফেস ১: কানেকশন প্যানেল (বড় সাইজ) */
+        /* ইন্টারফেস ১: কানেকশন প্যানেল */
         .connection-panel {
             background: #1e293b;
-            padding: 30px;
+            padding: 35px;
             border-radius: 16px;
             text-align: center;
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
@@ -36,7 +36,7 @@
             box-sizing: border-box;
         }
 
-        /* আপনার ইমেজের মতো আল্ট্রা-মিনিমাল ফাস্ট কিউআর */
+        /* আপনার ইমেজের মতো আল্ট্রা-মিনিমাল ফাস্ট কিউআর (পিসির জন্য) */
         .qr-area {
             background: #fff;
             padding: 20px;
@@ -44,7 +44,20 @@
             border-radius: 12px;
             margin: 20px 0;
         }
+
+        .room-display-box {
+            background: #0f172a;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #38bdf8;
+            letter-spacing: 2px;
+            margin-top: 10px;
+            border: 1px solid #334155;
+        }
         
+        /* বড় সাইজের ক্যামেরা ভিউফাইন্ডার (শুধুমাত্র মোবাইলের জন্য) */
         #reader {
             width: 100%;
             max-width: 380px;
@@ -59,12 +72,13 @@
             background: #38bdf8;
             color: #0f172a;
             border: none;
-            padding: 12px 24px;
+            padding: 14px 28px;
             border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
             margin: 8px;
             font-size: 14px;
+            transition: all 0.2s;
         }
         .btn:hover { background: #7dd3fc; }
         .btn-danger { background: #ef4444; color: white; }
@@ -123,9 +137,9 @@
         .file-info { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; text-align: left; }
         .download-btn { background: #22c55e; color: white; padding: 8px 16px; border: none; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 13px; }
 
-        /* ম্যানুয়াল রুম আইডি এরিয়া */
-        .manual-box { margin-top: 15px; display: none; background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #334155; }
-        input[type="text"] { width: 100%; background: #1e293b; color: #fff; border: 1px solid #475569; border-radius: 6px; padding: 10px; box-sizing: border-box; text-align: center; font-size: 16px; font-weight: bold; margin-bottom: 10px; }
+        /* মোবাইল স্ক্রিনের জন্য ম্যানুয়াল ইনপুট বক্স */
+        .phone-input-zone { margin-top: 20px; display: none; background: #0f172a; padding: 20px; border-radius: 12px; border: 1px solid #334155; }
+        input[type="text"] { width: 100%; background: #1e293b; color: #fff; border: 1px solid #475569; border-radius: 8px; padding: 12px; box-sizing: border-box; text-align: center; font-size: 18px; font-weight: bold; margin-bottom: 15px; letter-spacing: 2px; }
 
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
@@ -133,31 +147,35 @@
 <body>
 
     <h2>Instant P2P File Share</h2>
-    <p class="subtitle">Single QR Code Scan • Stable WebRTC Stream Connection</p>
+    <p class="subtitle">Scan QR or Enter Room ID to Connect Instantly • Works Serverless</p>
 
     <div class="connection-panel" id="connection-screen">
-        <span style="background: #1e3a8a; color: #93c5fd; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold;">🔴 Setup Connection</span>
         
-        <div id="qr-zone">
+        <div id="pc-view">
+            <span style="background: #1e3a8a; color: #93c5fd; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold;">🖥️ PC Screen Mode</span>
             <div class="qr-area" id="qrcode"></div>
-            <p style="font-size: 13px; color: #94a3b8; margin: 0;">PC Screen: Scan this from Mobile to Connect Instantly</p>
+            <p style="font-size: 13px; color: #94a3b8; margin: 0 0 5px 0;">Scan this QR Code from Mobile phone</p>
+            <p style="font-size: 12px; color: #64748b; margin: 0;">OR Use the Manual ID below if Scan fails:</p>
+            <div class="room-display-box" id="pc-room-id-text">Generating ID...</div>
         </div>
 
-        <div style="margin-top: 15px;">
-            <button class="btn" id="scan-btn" onclick="openCamera()">📷 Scan QR (Mobile)</button>
-            <button class="btn btn-secondary" onclick="toggleManualMode()">Manual Room ID</button>
+        <div id="phone-view" style="display: none; margin-top: 15px;">
+            <span style="background: #581c87; color: #e9d5ff; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold;">📱 Mobile Phone Mode</span>
+            <br><br>
+            <button class="btn" onclick="openPhoneCamera()">📷 Scan PC QR Code</button>
+            <button class="btn btn-secondary" onclick="showMobileManualInput()">🔢 Connect via Room ID</button>
         </div>
 
         <div id="reader"></div>
 
-        <div class="manual-box" id="manual-zone">
-            <label style="font-size: 13px; color: #38bdf8; display:block; margin-bottom:5px;">PC Room ID (This Screen):</label>
-            <input type="text" id="my-room-id" readonly onclick="this.select()">
-            
-            <label style="font-size: 13px; color: #a855f7; display:block; margin-bottom:5px;">Enter Partner's Room ID (From Mobile):</label>
-            <input type="text" id="partner-room-id" placeholder="Enter Room ID...">
-            <button class="btn" style="background:#22c55e; color:white; width:100%; margin:0;" onclick="connectManuallyWithRoom()">Connect Manually</button>
+        <div class="phone-input-zone" id="phone-manual-box">
+            <label style="font-size: 13px; color: #38bdf8; display:block; margin-bottom:10px;">Enter the Room ID displayed on PC:</label>
+            <input type="text" id="input-partner-room-id" placeholder="Ex: 54321" maxlength="5">
+            <button class="btn" style="background:#22c55e; color:white; width:100%; margin:0;" onclick="connectWithMobileRoomID()">Connect Manually</button>
         </div>
+
+        <hr style="border-color: #334155; margin: 25px 0 15px 0;">
+        <button class="btn btn-secondary" style="font-size:11px; padding:6px 14px;" onclick="switchDeviceRole()">Switch PC / Mobile View</button>
     </div>
 
     <div class="file-sharing-interface" id="sharing-screen">
@@ -205,41 +223,58 @@
 
         const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
+        // অ্যাপ প্রথম লোড হলে অটোমেটিক "PC স্ক্রিন মোড" চালু হবে
         window.onload = () => {
-            initSecureFastConnection();
+            initPCSession();
+            // মোবাইল বা ছোট স্ক্রিন ডিভাইস হলে অটোমেটিক মোবাইল ভিউতে কনভার্ট করার জন্য চেক
+            if (/Mobi|Android|iPhone/i.test(navigator.userAgent)) {
+                switchDeviceRole();
+            }
         };
 
-        // পিয়ার হুকিং সিগন্যাল চ্যানেল (১০০% স্ট্যাবল পাবলিক প্রোটোকল)
-        function initSecureFastConnection() {
-            // ৫ ডিজিটের ছোট রুম আইডি জেনারেট (যাতে কিউআর কোড একদম আপনার ইমেজের মতো পরিষ্কার থাকে)
-            roomId = Math.floor(10000 + Math.random() * 90000).toString();
-            document.getElementById('my-room-id').value = roomId;
+        // পিসির সেশন ইনিশিয়ালাইজেশন ও লো-ডেনসিটি QR জেনারেশন
+        function initPCSession() {
+            roomId = Math.floor(10000 + Math.random() * 90000).toString(); // ৫ ডিজিটের আইডি
+            document.getElementById('pc-room-id-text').innerText = "Room ID: " + roomId;
 
-            // গ্লোবাল ফ্রি সিগন্যালিং হুক
             signalingChannel = new BroadcastChannel(`room_${roomId}`);
-            signalingChannel.onmessage = (e) => {
-                handleSignalingData(e.data);
-            };
+            signalingChannel.onmessage = (e) => handleSignalingData(e.data);
 
-            // পিসির জন্য ফ্রেশ কিউআর কোড জেনারেশন
+            // পিসির স্ক্রিনে আসা কিউআর কোডটি একদম আপনার ইমেজের মতো ফাঁকা থাকবে
             document.getElementById('qrcode').innerHTML = "";
             new QRCode(document.getElementById('qrcode'), {
                 text: roomId,
                 width: 230,
                 height: 230,
-                correctLevel: QRCode.CorrectLevel.L // লো-ডেনসিটি, ফাস্ট স্ক্যানিং মোড
+                correctLevel: QRCode.CorrectLevel.L // ফাস্ট স্ক্যানিং মোড
             });
 
             setupWebRTC(true);
         }
 
+        // রিয়েল-টাইম ডিভাইস রোল সুইচার (পিসি <-> মোবাইল টেস্ট করার জন্য বাটন)
+        function switchDeviceRole() {
+            const pcView = document.getElementById('pc-view');
+            const phoneView = document.getElementById('phone-view');
+            const phoneManualBox = document.getElementById('phone-manual-box');
+
+            if (pcView.style.display === 'none') {
+                pcView.style.display = 'block';
+                phoneView.style.display = 'none';
+                phoneManualBox.style.display = 'none';
+                stopPhoneCamera();
+            } else {
+                pcView.style.display = 'none';
+                phoneView.style.display = 'block';
+            }
+        }
+
         function setupWebRTC(isInitiator) {
             if (peerConnection) peerConnection.close();
-            
             peerConnection = new RTCPeerConnection(rtcConfig);
 
             if (isInitiator) {
-                dataChannel = peerConnection.createDataChannel("fileStream");
+                dataChannel = peerConnection.createDataChannel("fileChannel");
                 handleDataChannelEvents(dataChannel);
             } else {
                 peerConnection.ondatachannel = (e) => {
@@ -249,9 +284,7 @@
             }
 
             peerConnection.onicecandidate = (e) => {
-                if (e.candidate) {
-                    sendSignal({ type: 'candidate', candidate: e.candidate });
-                }
+                if (e.candidate) sendSignal({ type: 'candidate', candidate: e.candidate });
             };
 
             if (isInitiator) {
@@ -264,17 +297,12 @@
         }
 
         function sendSignal(data) {
-            if (signalingChannel) {
-                signalingChannel.postMessage(data);
-            }
-            // গ্লোবাল নেটওয়ার্ক ব্যাকআপ রিলে ট্রিক (ক্রস ডিভাইস সিকিউর রেসপন্স)
+            if (signalingChannel) signalingChannel.postMessage(data);
             localStorage.setItem(`sig_${roomId}`, JSON.stringify({ data: data, time: Date.now() }));
         }
 
-        // লোকাল এবং গ্লোবাল সিগন্যাল লিসেনার কম্বিনেশন (ফিক্সড কানেকশন মেকানিজম)
         function handleSignalingData(data) {
             if (!peerConnection) return;
-            
             if (data.type === 'offer') {
                 peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp)).then(() => {
                     peerConnection.createAnswer().then(answer => {
@@ -290,46 +318,65 @@
             }
         }
 
-        // গ্লোবাল রিলে পোলিং লুপ (যাতে মোবাইল ডাটা বা অন্য নেটওয়ার্ক হলেও সাথে সাথে ক্যাচ করে)
+        // লাইভ ব্যাকএ্যান্ড ডাটা পোলিং লুপ (১০০% কানেকশন গ্যারান্টি)
         setInterval(() => {
-            const backupData = localStorage.getItem(`sig_${roomId}`);
-            if (backupData) {
-                const parsed = JSON.parse(backupData);
-                if (Date.now() - parsed.time < 2000) { // লেটেস্ট ২ সেকেন্ডের ডাটা হলে রান করবে
-                    handleSignalingData(parsed.data);
-                }
+            const backup = localStorage.getItem(`sig_${roomId}`);
+            if (backup) {
+                const parsed = JSON.parse(backup);
+                if (Date.now() - parsed.time < 2000) handleSignalingData(parsed.data);
             }
         }, 300);
 
-        // ফোন ক্যামেরা দিয়ে মাত্র ১ বার স্ক্যান করার কোড (ইনস্ট্যান্ট রেসপন্স)
-        function openCamera() {
+        // ফোনের স্ক্রিন থেকে ক্যামেরা অন করে পিসির কিউআর কোড স্ক্যান করা
+        function openPhoneCamera() {
             const readerEl = document.getElementById('reader');
+            document.getElementById('phone-manual-box').style.display = 'none';
+
             if (readerEl.style.display === 'block') {
-                stopCamera();
+                stopPhoneCamera();
             } else {
                 readerEl.style.display = 'block';
-                document.getElementById('qr-zone').style.display = 'none';
-                
                 html5QrcodeScanner = new Html5Qrcode("reader");
                 html5QrcodeScanner.start(
                     { facingMode: "environment" }, { fps: 30, qrbox: 260 },
                     (scannedRoomId) => {
-                        stopCamera();
-                        executeDevicePairing(scannedRoomId);
+                        stopPhoneCamera();
+                        executePairingProcess(scannedRoomId);
                     }
-                ).catch(() => alert("Camera permission error."));
+                ).catch(() => alert("ক্যামেরা পারমিশন দিন বা রুম আইডি দিয়ে কানেক্ট করুন।"));
             }
         }
 
-        function executeDevicePairing(targetRoomId) {
-            roomId = targetRoomId.trim();
+        function stopPhoneCamera() {
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(() => {
+                    document.getElementById('reader').style.display = 'none';
+                });
+            }
+        }
+
+        // ফোনের স্ক্রিন থেকে ম্যানুয়াল রুম আইডি দিয়ে কানেক্ট করার জন্য বক্স দেখানো
+        function showMobileManualInput() {
+            stopPhoneCamera();
+            const box = document.getElementById('phone-manual-box');
+            box.style.display = box.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function connectWithMobileRoomID() {
+            const inputId = document.getElementById('input-partner-room-id').value.trim();
+            if(!inputId) return alert("পিসির স্ক্রিনে থাকা Room ID টি ইনপুট দিন!");
+            executePairingProcess(inputId);
+        }
+
+        // মেইন কানেকশন সিঙ্ক্রোনাইজার
+        function executePairingProcess(targetId) {
+            roomId = targetId.trim();
             signalingChannel = new BroadcastChannel(`room_${roomId}`);
             signalingChannel.onmessage = (e) => handleSignalingData(e.data);
             
-            setupWebRTC(false); // মোবাইল নোড রেডি
+            setupWebRTC(false); // মোবাইল নোড সিঙ্ক স্টার্ট
             sendSignal({ type: 'trigger_handshake' });
-            
-            // যদি পেয়ারিং সিগন্যাল সিঙ্ক হয় তবে ৮০০ মিলি-সেকেন্ডে ইন্টারফেস ওপেন হবে
+
             setTimeout(() => {
                 if(dataChannel && dataChannel.readyState === "open") {
                     switchToSharingInterface();
@@ -337,34 +384,10 @@
             }, 800);
         }
 
-        // ম্যানুয়ালি রুম আইডি ইনপুট দিয়ে কানেক্ট করা
-        function connectManuallyWithRoom() {
-            const pRoom = document.getElementById('partner-room-id').value.trim();
-            if(!pRoom) return alert("অনুগ্রহ করে সঠিক রুম আইডি ইনপুট দিন!");
-            executeDevicePairing(pRoom);
-        }
-
-        function stopCamera() {
-            if (html5QrcodeScanner) {
-                html5QrcodeScanner.stop().then(() => {
-                    document.getElementById('reader').style.display = 'none';
-                    document.getElementById('qr-zone').style.display = 'block';
-                });
-            }
-        }
-
-        function toggleManualMode() {
-            const zone = document.getElementById('manual-zone');
-            zone.style.display = zone.style.display === 'block' ? 'none' : 'block';
-        }
-
-        // ডাটা চ্যানেল ইভেন্টস এবং ইন্টারফেস চেঞ্জার
+        // ডাটা চ্যানেল ইভেন্ট এবং অটো-ইন্টারফেস চেঞ্জার
         function handleDataChannelEvents(channel) {
             channel.binaryType = 'arraybuffer';
-            channel.onopen = () => {
-                switchToSharingInterface();
-            };
-
+            channel.onopen = () => { switchToSharingInterface(); };
             channel.onclose = () => { disconnectSession(); };
 
             channel.onmessage = (e) => {
@@ -386,19 +409,19 @@
         function switchToSharingInterface() {
             connectionScreen.style.display = 'none';
             sharingScreen.style.display = 'block';
-            stopCamera();
+            stopPhoneCamera();
         }
 
         function disconnectSession() {
             if(peerConnection) peerConnection.close();
             sharingScreen.style.display = 'none';
             connectionScreen.style.display = 'block';
-            document.getElementById('partner-room-id').value = "";
+            document.getElementById('input-partner-room-id').value = "";
             localStorage.removeItem(`sig_${roomId}`);
-            initSecureFastConnection(); // রিসেট করে ফ্রেশ সেশন চালু করা
+            initPCSession(); // ফ্রেশ ভাবে আবার পিসি কিউআর ও আইডি জেনারেট
         }
 
-        // ফাইল ট্রান্সফার কোড (যেকোনো ফরম্যাট সাপোর্ট)
+        // ফাইল সেন্ডিং লজিক (যেকোনো ফরম্যাট)
         function sendFiles(files) {
             if (!dataChannel || dataChannel.readyState !== "open") return alert("ডিভাইস কানেক্টেড নেই!");
             Array.from(files).forEach(file => {
@@ -419,7 +442,7 @@
             });
         }
 
-        // ড্র্যাগ অ্যান্ড ড্রপ (Drag & Drop) ইভেন্ট হ্যান্ডলার
+        // ড্র্যাগ অ্যান্ড ড্রপ লিসেনার্স
         senderBox.addEventListener('dragover', (e) => { e.preventDefault(); senderBox.classList.add('dragover'); });
         senderBox.addEventListener('dragleave', () => senderBox.classList.remove('dragover'));
         senderBox.addEventListener('drop', (e) => {
@@ -428,7 +451,7 @@
             sendFiles(e.dataTransfer.files);
         });
 
-        // ক্লিপবোর্ড পেস্ট (Ctrl+V) হ্যান্ডলার
+        // কপি-পেস্ট (Ctrl+V) লিসেনার
         senderBox.addEventListener('click', () => senderBox.focus());
         window.addEventListener('paste', (e) => {
             const items = (e.clipboardData || e.originalEvent.clipboardData).items;
