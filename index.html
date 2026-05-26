@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>100% Fixed P2P File Share</title>
+    <title>P2P File Share with Connection History</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
@@ -36,14 +36,12 @@
             box-sizing: border-box;
         }
 
-        /* সম্পূর্ণ নতুন কাস্টম কিউআর ডিজাইন */
         .qr-card {
             background: #ffffff;
             padding: 16px;
             display: inline-block;
             border-radius: 16px;
             margin: 20px 0;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
 
         .room-id-badge {
@@ -78,13 +76,36 @@
             font-weight: bold;
             margin: 8px;
             font-size: 14px;
-            transition: all 0.2s;
         }
         .btn:hover { background: #7dd3fc; }
         .btn-danger { background: #ef4444; color: white; }
         .btn-secondary { background: #475569; color: white; }
 
-        /* ইন্টারফেস ২: ফাইল শেয়ারিং স্ক্রিন */
+        /* হিস্ট্রি টেবিল ডিজাইন */
+        .history-panel {
+            margin-top: 30px;
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 480px;
+            box-sizing: border-box;
+            border: 1px solid #334155;
+        }
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+        .history-table th, .history-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #334155;
+        }
+        .history-table th { color: #38bdf8; font-weight: 600; }
+        .history-table td { color: #cbd5e1; }
+
         .file-sharing-interface {
             display: none; 
             width: 100%;
@@ -124,18 +145,14 @@
             box-sizing: border-box;
             padding: 30px;
             text-align: center;
-            outline: none;
         }
 
-        #sender-box.dragover { border-color: #38bdf8; background: #1e2e4a; }
         .file-label { background: #38bdf8; color: #0f172a; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 20px; }
         #file-input { display: none; }
-
         .file-list { width: 100%; height: 75%; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; margin-top: 15px; }
-        .file-item { background: #334155; padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+        .file-item { background: #334155; padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
         .download-btn { background: #22c55e; color: white; padding: 8px 16px; border: none; border-radius: 6px; text-decoration: none; font-weight: bold; }
 
-        /* মোবাইল ম্যানুয়াল ইনপুট জোন */
         .phone-input-zone { margin-top: 20px; display: none; background: #0f172a; padding: 20px; border-radius: 12px; border: 1px solid #334155; }
         input[type="text"] { width: 100%; background: #1e293b; color: #fff; border: 1px solid #475569; border-radius: 8px; padding: 12px; box-sizing: border-box; text-align: center; font-size: 20px; font-weight: bold; margin-bottom: 15px; letter-spacing: 3px; }
 
@@ -148,7 +165,6 @@
     <p class="subtitle">Cloud Signaled WebRTC • 1-Scan Instant Connection</p>
 
     <div class="connection-panel" id="connection-screen">
-        
         <div id="pc-view">
             <span style="background: #1e3a8a; color: #93c5fd; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: bold;">🖥️ PC SCREEN</span>
             <div class="qr-card" id="qrcode"></div>
@@ -172,7 +188,24 @@
         </div>
 
         <hr style="border-color: #334155; margin: 25px 0 15px 0;">
-        <button class="btn btn-secondary" style="font-size:11px; padding:6px 14px;" onclick="switchDeviceModeManual()">Switch PC / Mobile View (For Testing)</button>
+        <button class="btn btn-secondary" style="font-size:11px; padding:6px 14px;" onclick="switchDeviceModeManual()">Switch PC / Mobile View</button>
+    </div>
+
+    <div class="history-panel" id="history-container">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0; font-size: 16px; color: #38bdf8;">🕒 Connection History</h3>
+            <button onclick="clearConnectionHistory()" style="background: transparent; border: 1px solid #ef4444; color: #ef4444; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">Clear All</button>
+        </div>
+        <table class="history-table">
+            <thead>
+                <tr>
+                    <th>Connected Device ID</th>
+                    <th>Date & Time</th>
+                </tr>
+            </thead>
+            <tbody id="history-rows">
+                </tbody>
+        </table>
     </div>
 
     <div class="file-sharing-interface" id="sharing-screen">
@@ -185,8 +218,6 @@
             <div class="square-box" id="sender-box" tabindex="0">
                 <div style="font-size: 55px; margin-bottom: 10px;">📁</div>
                 <h3 style="margin: 0 0 5px 0; color:#38bdf8;">Sender Box</h3>
-                <p style="margin: 0; color: #94a3b8; font-size: 13px;">Drag & Drop ANY format file</p>
-                <p style="margin: 5px 0 0 0; color: #64748b; font-size: 12px;">or Click & Paste (Ctrl+V)</p>
                 <label for="file-input" class="file-label">Browse Files</label>
                 <input type="file" id="file-input" multiple>
             </div>
@@ -204,18 +235,18 @@
     <script>
         const connectionScreen = document.getElementById('connection-screen');
         const sharingScreen = document.getElementById('sharing-screen');
+        const historyContainer = document.getElementById('history-container');
         const senderBox = document.getElementById('sender-box');
         const fileInput = document.getElementById('file-input');
         const fileDisplayList = document.getElementById('file-display-list');
         const emptyMessage = document.getElementById('empty-message');
 
-        let myPeer, dataConnection;
-        let html5QrcodeScanner;
+        let myPeer, dataConnection, html5QrcodeScanner;
         let receivedChunks = [];
         let currentFileName = "", currentFileType = "";
 
         window.onload = () => {
-            // মোবাইল ডিভাইস হলে অটোমেটিক ফোন ভিউ সেটআপ হবে
+            renderHistoryTable(); // পেজ লোড হওয়ার সাথে সাথে পুরোনো হিস্ট্রি দেখাবে
             if (/Mobi|Android|iPhone/i.test(navigator.userAgent)) {
                 switchDeviceModeManual();
             } else {
@@ -223,34 +254,64 @@
             }
         };
 
-        // পিসির জন্য ইউনিক ৫ ডিজিটের আইডি তৈরি ও রিয়েল-টাইম ক্লাউড হুকিং
         function initPCServerNode() {
             const generatedID = Math.floor(10000 + Math.random() * 90000).toString();
-            
-            // PeerJS ক্লাউড সার্ভার কানেকশন (১০০% ফ্রি ও গ্লোবাল ডিভাইস সিঙ্ক)
             myPeer = new Peer(generatedID);
 
             myPeer.on('open', (id) => {
                 document.getElementById('pc-room-id-text').innerText = id;
-                
-                // পিসির নিজস্ব কাস্টম কিউআর কোড জেনারেশন
                 document.getElementById('qrcode').innerHTML = "";
-                new QRCode(document.getElementById('qrcode'), {
-                    text: id,
-                    width: 200,
-                    height: 200,
-                    correctLevel: QRCode.CorrectLevel.H
-                });
+                new QRCode(document.getElementById('qrcode'), { text: id, width: 200, height: 200 });
             });
 
-            // মোবাইল থেকে ইনকামিং কানেকশন রিসিভ করার লিসেনার
             myPeer.on('connection', (conn) => {
                 dataConnection = conn;
+                saveToHistory(conn.peer); // পিসিতে রিমোট ফোনের আইডি সেভ হবে
                 setupDataChannelEvents();
             });
         }
 
-        // ক্যামেরা অন করে মোবাইল থেকে স্ক্যান করা
+        // 🔴 হিস্ট্রি লোকাল স্টোরেজে সেভ করার ফাংশন
+        function saveToHistory(partnerId) {
+            let history = JSON.parse(localStorage.getItem('p2p_conn_history')) || [];
+            
+            const now = new Date();
+            const timeString = now.toLocaleDateString() + ' ' + now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+            // ডুপ্লিকেট এড়াতে একই আইডি পরপর থাকলে রিমুভ করে নতুন টাইমস্ট্যাম্প সেট করবে
+            history = history.filter(item => item.id !== partnerId);
+            
+            history.unshift({ id: partnerId, time: timeString }); // সবার ওপরে নতুন ডেটা রাখবে
+            localStorage.setItem('p2p_conn_history', JSON.stringify(history));
+            renderHistoryTable();
+        }
+
+        // 🔴 হিস্ট্রি টেবিল রেন্ডার করার ফাংশন
+        function renderHistoryTable() {
+            const history = JSON.parse(localStorage.getItem('p2p_conn_history')) || [];
+            const tbody = document.getElementById('history-rows');
+            tbody.innerHTML = "";
+
+            if (history.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="2" style="text-align:center; color:#64748b;">No connection history found</td></tr>`;
+                return;
+            }
+
+            history.forEach(item => {
+                const row = `<tr>
+                    <td style="font-family:monospace; font-weight:bold; color:#38bdf8;">Device #${item.id}</td>
+                    <td>${item.time}</td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        }
+
+        // 🔴 হিস্ট্রি মুছে ফেলার ফাংশন
+        function clearConnectionHistory() {
+            localStorage.removeItem('p2p_conn_history');
+            renderHistoryTable();
+        }
+
         function openCameraEngine() {
             const readerEl = document.getElementById('reader');
             document.getElementById('phone-manual-box').style.display = 'none';
@@ -266,46 +327,24 @@
                         stopCameraEngine();
                         connectToPCDevice(scannedRoomID);
                     }
-                ).catch(() => alert("ক্যামেরা অন করা যাচ্ছে না। রুম আইডি ব্যবহার করুন।"));
+                );
             }
         }
 
-        function stopCameraEngine() {
-            if (html5QrcodeScanner) {
-                html5QrcodeScanner.stop().then(() => {
-                    document.getElementById('reader').style.display = 'none';
-                });
-            }
-        }
-
-        function togglePhoneManualBox() {
-            stopCameraEngine();
-            const box = document.getElementById('phone-manual-box');
-            box.style.display = box.style.display === 'block' ? 'none' : 'block';
-        }
-
-        function connectWithManualID() {
-            const targetID = document.getElementById('input-room-id').value.trim();
-            if (!targetID) return alert("পিসির ৫ ডিজিটের রুম আইডিটি ইনপুট দিন!");
-            connectToPCDevice(targetID);
-        }
-
-        // মোবাইল থেকে পিসির আইডিতে ডাইরেক্ট রিয়েল-টাইম কানেক্ট করার মেকানিজম
         function connectToPCDevice(targetID) {
-            // মোবাইল ডিভাইস হিসেবে একটি র্যান্ডম আইডিতে ক্লাউড সিঙ্ক ওপেন করা
             myPeer = new Peer();
             myPeer.on('open', () => {
                 dataConnection = myPeer.connect(targetID, { reliable: true });
+                saveToHistory(targetID); // ফোনে পিসির আইডি হিস্ট্রিতে সেভ হবে
                 setupDataChannelEvents();
             });
         }
 
-        // ডাটা চ্যানেল ইভেন্টস (কানেক্ট হলে অটোমেটিক স্ক্রিন চেঞ্জ হবে)
         function setupDataChannelEvents() {
             dataConnection.on('open', () => {
                 connectionScreen.style.display = 'none';
+                historyContainer.style.display = 'none'; // কানেক্টেড অবস্থায় হিস্ট্রি প্যানেল হাইড থাকবে
                 sharingScreen.style.display = 'block';
-                stopCameraEngine();
             });
 
             dataConnection.on('data', (data) => {
@@ -325,16 +364,15 @@
             dataConnection.on('close', () => { window.location.reload(); });
         }
 
-        // ফাইল পাঠানোর হাই-স্পিড বাফারিং কোড
+        function stopCameraEngine() { if (html5QrcodeScanner) html5QrcodeScanner.stop().then(() => { document.getElementById('reader').style.display = 'none'; }); }
+        function togglePhoneManualBox() { stopCameraEngine(); const box = document.getElementById('phone-manual-box'); box.style.display = box.style.display === 'block' ? 'none' : 'block'; }
+        function connectWithManualID() { const targetID = document.getElementById('input-room-id').value.trim(); if (!targetID) return alert("Room ID দিন!"); connectToPCDevice(targetID); }
+
         function sendTargetFiles(files) {
-            if (!dataConnection) return alert("ডিভাইস কানেক্টেড নেই!");
-            
+            if (!dataConnection) return;
             Array.from(files).forEach(file => {
                 dataConnection.send({ fileMeta: { name: file.name, type: file.type } });
-                
-                const chunkSize = 16384; // 16KB standard chunk size
-                let offset = 0;
-
+                const chunkSize = 16384; let offset = 0;
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     offset += e.target.result.byteLength;
@@ -342,37 +380,13 @@
                     dataConnection.send({ fileChunk: e.target.result, isLast: isLast });
                     if (!isLast) readNextChunk();
                 };
-
-                function readNextChunk() {
-                    const slice = file.slice(offset, offset + chunkSize);
-                    reader.readAsArrayBuffer(slice);
-                }
+                function readNextChunk() { const slice = file.slice(offset, offset + chunkSize); reader.readAsArrayBuffer(slice); }
                 readNextChunk();
             });
         }
 
-        // ড্র্যাগ অ্যান্ড ড্রপ + শর্টকাট পেস্ট (Ctrl+V) হ্যান্ডলার
-        senderBox.addEventListener('dragover', (e) => { e.preventDefault(); senderBox.classList.add('dragover'); });
-        senderBox.addEventListener('dragleave', () => senderBox.classList.remove('dragover'));
-        senderBox.addEventListener('drop', (e) => {
-            e.preventDefault();
-            senderBox.classList.remove('dragover');
-            sendTargetFiles(e.dataTransfer.files);
-        });
-
-        senderBox.addEventListener('click', () => senderBox.focus());
-        window.addEventListener('paste', (e) => {
-            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-            const files = [];
-            for (let i = 0; i < items.length; i++) {
-                if (items[i].kind === 'file') {
-                    const f = items[i].getAsFile();
-                    if (f) files.push(f);
-                }
-            }
-            if (files.length > 0) sendTargetFiles(files);
-        });
-
+        senderBox.addEventListener('dragover', (e) => { e.preventDefault(); });
+        senderBox.addEventListener('drop', (e) => { e.preventDefault(); sendTargetFiles(e.dataTransfer.files); });
         fileInput.addEventListener('change', (e) => sendTargetFiles(e.target.files));
 
         function displayFileInReceiver(name, blob) {
@@ -380,29 +394,15 @@
             const item = document.createElement('div');
             item.className = 'file-item';
             const url = URL.createObjectURL(blob);
-            item.innerHTML = `
-                <div style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${name}</div>
-                <a href="${url}" download="${name}" class="download-btn">Download</a>
-            `;
+            item.innerHTML = `<div>${name}</div><a href="${url}" download="${name}" class="download-btn">Download</a>`;
             fileDisplayList.appendChild(item);
         }
 
-        // ম্যানুয়াল ভিউ সুইচার বাটন (টেস্টিং পারপাস)
         function switchDeviceModeManual() {
             const pc = document.getElementById('pc-view');
             const phone = document.getElementById('phone-view');
-            const phoneBox = document.getElementById('phone-manual-box');
-            if (pc.style.display === 'none') {
-                pc.style.display = 'block';
-                phone.style.display = 'none';
-                phoneBox.style.display = 'none';
-                stopCameraEngine();
-                initPCServerNode();
-            } else {
-                pc.style.display = 'none';
-                phone.style.display = 'block';
-                if(myPeer) myPeer.destroy();
-            }
+            if (pc.style.display === 'none') { pc.style.display = 'block'; phone.style.display = 'none'; initPCServerNode(); } 
+            else { pc.style.display = 'none'; phone.style.display = 'block'; if(myPeer) myPeer.destroy(); }
         }
     </script>
 </body>
