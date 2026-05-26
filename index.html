@@ -1,0 +1,196 @@
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instant QR File Share</title>
+    <style>
+        /* মূল পেজের ডিজাইন */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #0f172a; /* ডার্ক থিম */
+            color: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        h2 {
+            margin-bottom: 5px;
+            color: #38bdf8;
+        }
+
+        .subtitle {
+            color: #94a3b8;
+            margin-bottom: 25px;
+            font-size: 14px;
+        }
+
+        /* কানেকশন (QR Code) এরিয়া */
+        .connection-panel {
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .qr-placeholder {
+            width: 180px;
+            height: 180px;
+            background: #fff;
+            margin: 15px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            color: #000;
+        }
+
+        /* পাশাপাশি দুটি স্কয়ার বক্সের ওয়ার্কস্পেস */
+        .workspace {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap; /* মোবাইল স্ক্রিনের জন্য নিচে নেমে যাবে */
+            width: 100%;
+            max-width: 800px;
+        }
+
+        /* স্কয়ার বক্সের কমন স্টাইল */
+        .square-box {
+            width: 320px;
+            height: 320px;
+            background: #1e293b;
+            border: 3px dashed #475569;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+            padding: 20px;
+            text-align: center;
+        }
+
+        /* ড্র্যাগ ওভার বা ফাইল সিলেক্ট হলে বর্ডারের অ্যানিমেশন */
+        #sender-box.dragover {
+            border-color: #38bdf8;
+            background: #1e293b;
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
+        }
+
+        .square-box icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        /* ফাইল ইনপুট হাইড করে সুন্দর বাটন তৈরি */
+        .file-label {
+            background: #38bdf8;
+            color: #0f172a;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 15px;
+            transition: 0.2s;
+        }
+
+        .file-label:hover {
+            background: #7dd3fc;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        /* রিসিভড ফাইলের লিস্ট এবং ডাউনলোড বাটন */
+        .file-list {
+            width: 100%;
+            height: 70%;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .file-item {
+            background: #334155;
+            padding: 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
+
+        .download-btn {
+            background: #22c55e;
+            color: white;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .download-btn:hover {
+            background: #4ade80;
+        }
+
+        .status-text {
+            color: #94a3b8;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Instant P2P File Share</h2>
+    <p class="subtitle">Computer to Mobile / Mobile to Computer Instant Transfer</p>
+
+    <div class="connection-panel">
+        <span id="connection-status" style="color: #ef4444;">🔴 Disconnected</span>
+        <div class="qr-placeholder" id="qr-code-container">
+            <span style="color: #64748b; font-size: 12px;">Generating QR Code...</span>
+        </div>
+        <p style="font-size: 13px; margin: 0; color: #94a3b8;">Scan this code from another device to connect</p>
+    </div>
+
+    <div class="workspace">
+        
+        <div class="square-box" id="sender-box">
+            <div style="font-size: 40px;">📁</div>
+            <p style="margin: 10px 0 5px 0; font-weight: 500;">Drag & Drop files here</p>
+            <p style="margin: 0; color: #64748b; font-size: 13px;">or Copy & Paste anywhere in this box</p>
+            
+            <label for="file-input" class="file-label">Browse Files</label>
+            <input type="file" id="file-input" multiple>
+        </div>
+
+        <div class="square-box" id="receiver-box">
+            <div style="font-size: 40px;">📥</div>
+            <p style="margin: 5px 0; font-weight: 500;">Received Files</p>
+            
+            <div class="file-list" id="file-display-list">
+                <p class="status-text" id="empty-message">No files received yet.</p>
+            </div>
+        </div>
+
+    </div>
+
+</body>
+</html>
