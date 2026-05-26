@@ -24,7 +24,6 @@
         h2 { margin-bottom: 5px; color: #38bdf8; }
         .subtitle { color: #94a3b8; margin-bottom: 25px; font-size: 14px; text-align: center; }
 
-        /* কানেকশন প্যানেল */
         .connection-panel {
             background: #1e293b;
             padding: 20px;
@@ -33,12 +32,12 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             margin-bottom: 30px;
             width: 100%;
-            max-width: 450px;
+            max-width: 500px;
             box-sizing: border-box;
         }
 
         .status-badge {
-            padding: 5px 10px;
+            padding: 5px 12px;
             border-radius: 20px;
             font-size: 12px;
             font-weight: bold;
@@ -76,9 +75,8 @@
             font-size: 13px;
         }
         .btn-primary { background: #38bdf8; color: #0f172a; }
-        .btn-primary:hover { background: #7dd3fc; }
+        .btn-success { background: #22c55e; color: white; }
 
-        /* ওয়ার্কস্পেস */
         .workspace {
             display: flex;
             gap: 30px;
@@ -100,99 +98,76 @@
             justify-content: center;
             align-items: center;
             position: relative;
-            transition: all 0.3s ease;
             box-sizing: border-box;
             padding: 20px;
             text-align: center;
             outline: none;
         }
 
-        #sender-box.dragover {
-            border-color: #38bdf8;
-            background: #1e2e4a;
-        }
-
-        .file-label {
-            background: #38bdf8;
-            color: #0f172a;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            margin-top: 15px;
-        }
-
+        #sender-box.dragover { border-color: #38bdf8; background: #1e2e4a; }
+        .file-label { background: #38bdf8; color: #0f172a; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; margin-top: 15px; }
         #file-input { display: none; }
 
-        .file-list {
-            width: 100%;
-            height: 70%;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-top: 10px;
-        }
+        .file-list { width: 100%; height: 70%; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+        .file-item { background: #334155; padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+        .file-info { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
+        .download-btn { background: #22c55e; color: white; padding: 6px 12px; border: none; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 12px; }
 
-        .file-item {
-            background: #334155;
+        /* টোকেন বক্স এরিয়া */
+        .token-container {
+            margin-top: 15px;
+            background: #0f172a;
             padding: 10px;
             border-radius: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 14px;
+            border: 1px solid #334155;
         }
-
-        .file-info {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 160px;
-        }
-
-        .download-btn {
-            background: #22c55e;
-            color: white;
-            padding: 6px 12px;
-            border: none;
+        textarea {
+            width: 100%;
+            background: #1e293b;
+            color: #fff;
+            border: 1px solid #475569;
             border-radius: 6px;
-            cursor: pointer;
-            text-decoration: none;
-            font-weight: bold;
-            font-size: 12px;
+            padding: 8px;
+            box-sizing: border-box;
+            resize: none;
+            font-family: monospace;
+            font-size: 11px;
         }
-
-        /* টেক্সট এরিয়া হাইড রাখার জন্য (কানেকশন ডাটা কপি করার ব্যাকআপ অপশন) */
-        #token-area { display: none; width: 100%; margin-top: 10px; }
     </style>
 </head>
 <body>
 
     <h2>Instant P2P File Share</h2>
-    <p class="subtitle">Pure GitHub Project - Completely Serverless & Offline Supported</p>
+    <p class="subtitle">If QR scanning fails, use the Copy-Paste Token option below for instant connection!</p>
 
     <div class="connection-panel">
         <span id="connection-status" class="status-badge disconnected">🔴 Disconnected</span>
         
         <div>
-            <button class="btn btn-primary" onclick="startAsHost()">1. Create QR (PC/Sender)</button>
-            <button class="btn" onclick="startAsReceiver()">2. Scan QR (Mobile/Receiver)</button>
+            <button class="btn btn-primary" onclick="startAsHost()">1. Init Connection (Device A)</button>
+            <button class="btn btn-primary" onclick="startAsReceiver()">2. Join Connection (Device B)</button>
         </div>
 
         <div id="qr-wrapper" style="display:none;">
             <div class="qr-area" id="qrcode"></div>
-            <p style="font-size: 12px; color: #94a3b8;">Scan this from the second device</p>
+            <p style="font-size: 12px; color: #94a3b8; margin: 5px 0;">Scan this QR or copy the Token below:</p>
         </div>
 
         <div id="scanner-wrapper" style="display:none;">
             <div id="reader"></div>
-            <p style="font-size: 12px; color: #94a3b8;">Align the QR code inside the box</p>
+            <button class="btn" onclick="stopCamera()">Stop Camera</button>
         </div>
 
-        <div id="token-area">
-            <textarea id="token-input" rows="3" placeholder="Paste response token here if scanning fails..." style="width:100%; background:#0f172a; color:#fff; border:1px solid #475569; border-radius:6px; padding:5px;"></textarea>
-            <button class="btn" onclick="handleManualToken()">Connect Manually</button>
+        <div class="token-container" id="token-area" style="display: none;">
+            <label id="token-label" style="font-size: 12px; color: #38bdf8; display:block; margin-bottom:5px;">Connection Token:</label>
+            <textarea id="token-output" rows="3" readonly onclick="this.select()"></textarea>
+            <button class="btn" id="copy-btn" onclick="copyToken()">Copy Token</button>
+            
+            <hr style="border-color: #334155; margin: 15px 0;">
+            
+            <label style="font-size: 12px; color: #a855f7; display:block; margin-bottom:5px;">Paste Partner's Token Here:</label>
+            <textarea id="token-input" rows="3" placeholder="Paste the token generated from the other device here..."></textarea>
+            <button class="btn btn-success" onclick="handleManualToken()">Connect Devices</button>
         </div>
     </div>
 
@@ -200,7 +175,7 @@
         <div class="square-box" id="sender-box" tabindex="0">
             <div style="font-size: 40px; margin-bottom: 10px;">📁</div>
             <p style="margin: 0 0 5px 0; font-weight: 500;">Drag & Drop files here</p>
-            <p style="margin: 0; color: #64748b; font-size: 13px;">or Click & Paste (Ctrl+V) anywhere</p>
+            <p style="margin: 0; color: #64748b; font-size: 13px;">or Click & Paste (Ctrl+V)</p>
             <label for="file-input" class="file-label">Browse Files</label>
             <input type="file" id="file-input" multiple>
         </div>
@@ -220,129 +195,144 @@
         const fileDisplayList = document.getElementById('file-display-list');
         const emptyMessage = document.getElementById('empty-message');
         const statusBadge = document.getElementById('connection-status');
+        const tokenArea = document.getElementById('token-area');
+        const tokenOutput = document.getElementById('token-output');
+        const tokenInput = document.getElementById('token-input');
 
         let peerConnection;
         let dataChannel;
+        let html5QrcodeScanner;
         let receivedChunks = [];
         let currentFileName = "";
         let currentFileType = "";
 
-        // WebRTC ডিফল্ট কনফিগারেশন (অফলাইনের জন্য কোনো STUN/TURN সার্ভার লাগবে না)
-        const rtcConfig = { iceServers: [] }; 
+        // ব্রাউজারের ডিফল্ট লোকাল কানেকশন কনফিগারেশন
+        const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }; 
 
-        // ১. হোস্ট বা সেন্ডার হিসেবে শুরু করা (সাধারণত পিসিতে)
+        // ১. ডিভাইস এ (পিসি/সেন্ডার)
         function startAsHost() {
-            document.getElementById('qr-wrapper').style.display = 'block';
-            document.getElementById('scanner-wrapper').style.display = 'none';
-            document.getElementById('token-area').style.display = 'block';
-
+            showTokenArea();
             peerConnection = new RTCPeerConnection(rtcConfig);
             dataChannel = peerConnection.createDataChannel("fileTransfer");
-            
             setupDataChannelEvents(dataChannel);
 
             peerConnection.onicecandidate = (e) => {
                 if (!e.candidate) {
-                    // সিগন্যালিং টোকেন জেনারেট করে QR কোড বানানো
                     const offerToken = btoa(JSON.stringify(peerConnection.localDescription));
-                    document.getElementById('qrcode').innerHTML = "";
-                    new QRCode(document.getElementById('qrcode'), {
-                        text: "OFFER:" + offerToken,
-                        width: 160,
-                        height: 160
-                    });
+                    tokenOutput.value = "OFFER:" + offerToken;
+                    generateQR("OFFER:" + offerToken);
                 }
             };
-
             peerConnection.createOffer().then(offer => peerConnection.setLocalDescription(offer));
         }
 
-        // ২. রিসিভার বা ক্লায়েন্ট হিসেবে শুরু করা (সাধারণত মোবাইলে)
+        // ২. ডিভাইস বি (মোবাইল/রিসিভার)
         function startAsReceiver() {
+            showTokenArea();
             document.getElementById('scanner-wrapper').style.display = 'block';
-            document.getElementById('qr-wrapper').style.display = 'none';
 
             peerConnection = new RTCPeerConnection(rtcConfig);
-            
             peerConnection.ondatachannel = (e) => {
                 dataChannel = e.channel;
                 setupDataChannelEvents(dataChannel);
             };
 
-            // ক্যামেরা স্ক্যানার চালু করা
-            const html5QrcodeScanner = new Html5Qrcode("reader");
+            // ক্যামেরা স্ক্যানার শুরু করা
+            html5QrcodeScanner = new Html5Qrcode("reader");
             html5QrcodeScanner.start(
                 { facingMode: "environment" }, 
                 { fps: 10, qrbox: 250 },
                 (qrText) => {
-                    html5QrcodeScanner.stop();
-                    document.getElementById('scanner-wrapper').style.display = 'none';
-                    
-                    if(qrText.startsWith("OFFER:")) {
-                        const token = atob(qrText.replace("OFFER:", ""));
-                        peerConnection.setRemoteDescription(new RTCSessionDescription(JSON.parse(token)))
-                            .then(() => peerConnection.createAnswer())
-                            .then(answer => peerConnection.setLocalDescription(answer))
-                            .then(() => {
-                                peerConnection.onicecandidate = (e) => {
-                                    if (!e.candidate) {
-                                        const answerToken = btoa(JSON.stringify(peerConnection.localDescription));
-                                        document.getElementById('qr-wrapper').style.display = 'block';
-                                        document.getElementById('qrcode').innerHTML = "";
-                                        new QRCode(document.getElementById('qrcode'), {
-                                            text: "ANSWER:" + answerToken,
-                                            width: 160,
-                                            height: 160
-                                        });
-                                    }
-                                };
-                            });
-                    } else if(qrText.startsWith("ANSWER:")) {
-                        const token = atob(qrText.replace("ANSWER:", ""));
-                        peerConnection.setRemoteDescription(new RTCSessionDescription(JSON.parse(token)));
-                    }
+                    processScannedToken(qrText);
+                    stopCamera();
                 }
-            ).catch(err => alert("Camera permission error: " + err));
+            ).catch(err => console.log("Camera alternative: Manual Copy-Paste enabled."));
         }
 
-        // ম্যানুয়াল টোকেন দিয়ে কানেক্ট করার ব্যবস্থা (ব্যাকআপ)
+        // স্ক্যান করা বা পেস্ট করা টোকেন প্রসেস করা
+        function processScannedToken(qrText) {
+            if(qrText.startsWith("OFFER:")) {
+                const token = atob(qrText.replace("OFFER:", ""));
+                peerConnection.setRemoteDescription(new RTCSessionDescription(JSON.parse(token)))
+                    .then(() => peerConnection.createAnswer())
+                    .then(answer => peerConnection.setLocalDescription(answer))
+                    .then(() => {
+                        peerConnection.onicecandidate = (e) => {
+                            if (!e.candidate) {
+                                const answerToken = btoa(JSON.stringify(peerConnection.localDescription));
+                                tokenOutput.value = "ANSWER:" + answerToken;
+                                generateQR("ANSWER:" + answerToken);
+                            }
+                        };
+                    });
+            } else if(qrText.startsWith("ANSWER:")) {
+                const token = atob(qrText.replace("ANSWER:", ""));
+                peerConnection.setRemoteDescription(new RTCSessionDescription(JSON.parse(token)));
+            }
+        }
+
+        // ম্যানুয়াল কানেকশন বাটন (কপি-পেস্টের মাধ্যমে)
         function handleManualToken() {
-            const rawToken = document.getElementById('token-input').value.trim();
-            if(!rawToken) return;
-            const token = atob(rawToken.replace("ANSWER:", "").replace("OFFER:", ""));
-            peerConnection.setRemoteDescription(new RTCSessionDescription(JSON.parse(token)));
+            const rawToken = tokenInput.value.trim();
+            if(!rawToken) return alert("Please paste the token first!");
+            processScannedToken(rawToken);
         }
 
-        // ৩. ডেটা চ্যানেল ইভেন্ট হ্যান্ডলার (কানেকশন স্ট্যাটাস এবং ফাইল রিসিভ)
+        // QR কোড তৈরি করা (সাইজ ছোট এবং অপ্টিমাইজড করা হয়েছে)
+        function generateQR(text) {
+            document.getElementById('qr-wrapper').style.display = 'block';
+            document.getElementById('qrcode').innerHTML = "";
+            new QRCode(document.getElementById('qrcode'), {
+                text: text,
+                width: 200,
+                height: 200,
+                correctLevel : QRCode.CorrectLevel.L // ডাটা ডেনসিটি কমানোর জন্য Low correction level
+            });
+        }
+
+        function showTokenArea() {
+            tokenArea.style.display = 'block';
+        }
+
+        function stopCamera() {
+            if(html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(() => {
+                    document.getElementById('scanner-wrapper').style.display = 'none';
+                });
+            }
+        }
+
+        function copyToken() {
+            tokenOutput.select();
+            document.execCommand('copy');
+            const btn = document.getElementById('copy-btn');
+            btn.innerText = "Copied!";
+            setTimeout(() => btn.innerText = "Copy Token", 2000);
+        }
+
+        // ডেটা চ্যানেল ইভেন্ট (কানেকশন সাকসেস)
         function setupDataChannelEvents(channel) {
             channel.binaryType = 'arraybuffer';
-            
             channel.onopen = () => {
                 statusBadge.className = "status-badge connected";
-                statusBadge.innerText = "🟢 Connected";
+                statusBadge.innerText = "🟢 Connected Successfully!";
                 document.getElementById('qr-wrapper').style.display = 'none';
-                document.getElementById('token-area').style.display = 'none';
+                tokenArea.style.display = 'none';
+                stopCamera();
             };
-
             channel.onclose = () => {
                 statusBadge.className = "status-badge disconnected";
                 statusBadge.innerText = "🔴 Disconnected";
             };
-
-            // অন্য ডিভাইস থেকে ফাইল এলে এখানে রিসিভ হবে
             channel.onmessage = (e) => {
                 if (typeof e.data === 'string') {
-                    // ফাইলের মেটাডেটা (নাম ও টাইপ) এসেছে
                     const meta = JSON.parse(e.data);
                     currentFileName = meta.name;
                     currentFileType = meta.type;
                     receivedChunks = [];
                 } else {
-                    // ফাইলের বাইনারি ডাটা চাঙ্ক বা টুকরো এসেছে
                     receivedChunks.push(e.data);
-                    
-                    // ফাইল সম্পূর্ণ চলে এলে তা জোড়া লাগিয়ে ডাউনলোড বাটন দেওয়া হবে
-                    if (e.data.byteLength < 16384) { // শেষ টুকরো চেনার সহজ উপায়
+                    if (e.data.byteLength < 16384) { 
                         const blob = new Blob(receivedChunks, { type: currentFileType });
                         displayReceivedFile(currentFileName, blob);
                     }
@@ -350,54 +340,40 @@
             };
         }
 
-        // ৪. ফাইল পাঠানোর মেকানিজম (টুকরো টুকরো করে পাঠানো বা Chunks)
+        // ফাইল সেন্ডিং লজিক
         function handleFiles(files) {
             if (!dataChannel || dataChannel.readyState !== "open") {
-                alert("Please connect the devices first using QR Code!");
-                return;
+                return alert("Devices are not connected yet! Please link them using token/QR code.");
             }
-
             Array.from(files).forEach(file => {
-                // প্রথমে ফাইলের মেটাডেটা পাঠানো
                 dataChannel.send(JSON.stringify({ name: file.name, type: file.type }));
-
-                // ফাইলকে টুকরো করে রিড করা ও পাঠানো (Chunking: 16KB per chunk)
                 const chunkSize = 16384;
                 const reader = new FileReader();
                 let offset = 0;
-
                 reader.onload = (e) => {
                     dataChannel.send(e.target.result);
                     offset += e.target.result.byteLength;
-                    if (offset < file.size) {
-                        readNextChunk();
-                    }
+                    if (offset < file.size) readNextChunk();
                 };
-
                 function readNextChunk() {
                     const slice = file.slice(offset, offset + chunkSize);
                     reader.readAsArrayBuffer(slice);
                 }
-
                 readNextChunk();
             });
         }
 
-        // ৫. UI ইভেন্ট লিসেনারসমূহ (আগের মতই)
+        // UI লিসেনার
         fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
         senderBox.addEventListener('dragover', (e) => { e.preventDefault(); senderBox.classList.add('dragover'); });
         senderBox.addEventListener('dragleave', () => senderBox.classList.remove('dragover'));
         senderBox.addEventListener('drop', (e) => { e.preventDefault(); senderBox.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
         senderBox.addEventListener('click', () => senderBox.focus());
-        
         window.addEventListener('paste', (e) => {
             const items = (e.clipboardData || e.originalEvent.clipboardData).items;
             const fileList = [];
             for (let i = 0; i < items.length; i++) {
-                if (items[i].kind === 'file') {
-                    const file = items[i].getAsFile();
-                    if (file) fileList.push(file);
-                }
+                if (items[i].kind === 'file') { const file = items[i].getAsFile(); if (file) fileList.push(file); }
             }
             if (fileList.length > 0) handleFiles(fileList);
         });
