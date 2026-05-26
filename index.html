@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -16,6 +16,7 @@
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
+            box-sizing: border-box;
         }
 
         h2 {
@@ -27,6 +28,7 @@
             color: #94a3b8;
             margin-bottom: 25px;
             font-size: 14px;
+            text-align: center;
         }
 
         /* কানেকশন (QR Code) এরিয়া */
@@ -39,6 +41,7 @@
             margin-bottom: 30px;
             width: 100%;
             max-width: 400px;
+            box-sizing: border-box;
         }
 
         .qr-placeholder {
@@ -80,18 +83,14 @@
             box-sizing: border-box;
             padding: 20px;
             text-align: center;
+            outline: none;
         }
 
         /* ড্র্যাগ ওভার বা ফাইল সিলেক্ট হলে বর্ডারের অ্যানিমেশন */
         #sender-box.dragover {
             border-color: #38bdf8;
-            background: #1e293b;
+            background: #1e2e4a;
             box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
-        }
-
-        .square-box icon {
-            font-size: 48px;
-            margin-bottom: 15px;
         }
 
         /* ফাইল ইনপুট হাইড করে সুন্দর বাটন তৈরি */
@@ -133,6 +132,15 @@
             justify-content: space-between;
             align-items: center;
             font-size: 14px;
+            text-align: left;
+        }
+
+        .file-info {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 160px;
+            color: #e2e8f0;
         }
 
         .download-btn {
@@ -145,6 +153,7 @@
             text-decoration: none;
             font-weight: bold;
             font-size: 12px;
+            transition: background 0.2s;
         }
 
         .download-btn:hover {
@@ -154,6 +163,7 @@
         .status-text {
             color: #94a3b8;
             font-size: 14px;
+            margin: auto;
         }
     </style>
 </head>
@@ -163,7 +173,7 @@
     <p class="subtitle">Computer to Mobile / Mobile to Computer Instant Transfer</p>
 
     <div class="connection-panel">
-        <span id="connection-status" style="color: #ef4444;">🔴 Disconnected</span>
+        <span id="connection-status" style="color: #ef4444; font-weight: bold;">🔴 Disconnected</span>
         <div class="qr-placeholder" id="qr-code-container">
             <span style="color: #64748b; font-size: 12px;">Generating QR Code...</span>
         </div>
@@ -172,18 +182,18 @@
 
     <div class="workspace">
         
-        <div class="square-box" id="sender-box">
-            <div style="font-size: 40px;">📁</div>
-            <p style="margin: 10px 0 5px 0; font-weight: 500;">Drag & Drop files here</p>
-            <p style="margin: 0; color: #64748b; font-size: 13px;">or Copy & Paste anywhere in this box</p>
+        <div class="square-box" id="sender-box" tabindex="0">
+            <div style="font-size: 40px; margin-bottom: 10px;">📁</div>
+            <p style="margin: 0 0 5px 0; font-weight: 500;">Drag & Drop files here</p>
+            <p style="margin: 0; color: #64748b; font-size: 13px;">or Click & Paste (Ctrl+V) anywhere</p>
             
             <label for="file-input" class="file-label">Browse Files</label>
             <input type="file" id="file-input" multiple>
         </div>
 
         <div class="square-box" id="receiver-box">
-            <div style="font-size: 40px;">📥</div>
-            <p style="margin: 5px 0; font-weight: 500;">Received Files</p>
+            <div style="font-size: 40px; margin-bottom: 10px;">📥</div>
+            <p style="margin: 0 0 10px 0; font-weight: 500;">Received Files</p>
             
             <div class="file-list" id="file-display-list">
                 <p class="status-text" id="empty-message">No files received yet.</p>
@@ -192,5 +202,94 @@
 
     </div>
 
+    <script>
+        // DOM এলিমেন্টগুলো সিলেক্ট করা
+        const senderBox = document.getElementById('sender-box');
+        const fileInput = document.getElementById('file-input');
+        const fileDisplayList = document.getElementById('file-display-list');
+        const emptyMessage = document.getElementById('empty-message');
+
+        // ফাইল প্রসেস করার মূল ফাংশন
+        function handleFiles(files) {
+            if (files.length === 0) return;
+
+            // "No files received yet" লেখাটি হাইড করা
+            if (emptyMessage) {
+                emptyMessage.style.display = 'none';
+            }
+
+            Array.from(files).forEach(file => {
+                console.log("File detected:", file.name, "Size:", file.size, "Type:", file.type);
+                
+                // সাময়িকভাবে একই ডিভাইসে ফাইল ডাউনলোডের টেস্ট করা হচ্ছে
+                // (WebRTC যুক্ত করার পর এই ফাংশনটি রিসিভার ডিভাইসে কল হবে)
+                displayReceivedFile(file.name, file);
+            });
+        }
+
+        // ১. ব্রাউজ ফাইল (Browse Button) ইভেন্ট
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        // ২. ড্র্যাগ অ্যান্ড ড্রপ (Drag & Drop) ইভেন্ট হ্যান্ডলার
+        senderBox.addEventListener('dragover', (e) => {
+            e.preventDefault(); // ব্রাউজারের ফাইল ওপেন করার ডিফল্ট আচরণ বন্ধ করা
+            senderBox.classList.add('dragover');
+        });
+
+        senderBox.addEventListener('dragleave', () => {
+            senderBox.classList.remove('dragover');
+        });
+
+        senderBox.addEventListener('drop', (e) => {
+            e.preventDefault();
+            senderBox.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            handleFiles(files);
+        });
+
+        // ৩. কপি এবং পেস্ট (Copy & Paste) ইভেন্ট হ্যান্ডলার
+        // বক্সে ক্লিক করলে সেটি ফোকাস হবে যাতে পেস্ট কমান্ড কাজ করে
+        senderBox.addEventListener('click', () => {
+            senderBox.focus();
+        });
+
+        window.addEventListener('paste', (e) => {
+            // চেক করা হচ্ছে ক্লিপবোর্ডে কোনো ফাইল আছে কিনা
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            const fileList = [];
+
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].kind === 'file') {
+                    const file = items[i].getAsFile();
+                    if (file) fileList.push(file);
+                }
+            }
+
+            // যদি ফাইল পাওয়া যায় তবে প্রসেস করা হবে
+            if (fileList.length > 0) {
+                handleFiles(fileList);
+            }
+        });
+
+        // ৪. ডান পাশের বক্সে ডাউনলোডের লিঙ্ক তৈরি ও ডিসপ্লে করার ফাংশন
+        function displayReceivedFile(fileName, fileData) {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-item';
+
+            // ফাইলের জন্য একটি মেমরি লিঙ্ক (Blob URL) তৈরি করা
+            const blob = new Blob([fileData], { type: fileData.type });
+            const downloadUrl = URL.createObjectURL(blob);
+
+            fileItem.innerHTML = `
+                <div class="file-info" title="${fileName}">${fileName}</div>
+                <a href="${downloadUrl}" download="${fileName}" class="download-btn">Download</a>
+            `;
+
+            fileDisplayList.appendChild(fileItem);
+        }
+    </script>
 </body>
 </html>
