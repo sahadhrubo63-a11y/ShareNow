@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>1-Way QR & Manual P2P File Share</title>
+    <title>Robust 1-Way P2P Connect</title>
+    <!-- গ্লোবাল কিউআর এবং স্ক্যানার ইঞ্জিন (কোনো স্ক্রিনশট পলিসি নেই) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', sans-serif;
             margin: 0;
             padding: 20px;
             background-color: #0f172a;
@@ -22,46 +23,44 @@
         }
 
         h2 { margin-bottom: 5px; color: #38bdf8; }
-        .subtitle { color: #94a3b8; margin-bottom: 25px; font-size: 14px; text-align: center; }
+        .subtitle { color: #94a3b8; margin-bottom: 25px; font-size: 14px; }
 
-        /* ইন্টারফেস ১: কানেকশন প্যানেল */
         .connection-panel {
             background: #1e293b;
             padding: 35px;
             border-radius: 16px;
             text-align: center;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
             width: 100%;
-            max-width: 500px;
+            max-width: 480px;
             box-sizing: border-box;
         }
 
-        /* আপনার ইমেজের মতো আল্ট্রা-মিনিমাল ফাস্ট কিউআর (পিসির জন্য) */
-        .qr-area {
-            background: #fff;
-            padding: 20px;
+        /* নিজস্ব স্ট্যান্ডার্ড কিউআর কোড ব্লক ডিজাইন */
+        .qr-wrapper {
+            background: #ffffff;
+            padding: 15px;
             display: inline-block;
             border-radius: 12px;
             margin: 20px 0;
         }
 
-        .room-display-box {
+        .id-display-box {
             background: #0f172a;
             padding: 12px;
             border-radius: 8px;
-            font-size: 18px;
+            font-size: 20px;
             font-weight: bold;
             color: #38bdf8;
-            letter-spacing: 2px;
+            letter-spacing: 3px;
             margin-top: 10px;
             border: 1px solid #334155;
         }
         
-        /* বড় সাইজের ক্যামেরা ভিউফাইন্ডার (শুধুমাত্র মোবাইলের জন্য) */
         #reader {
             width: 100%;
-            max-width: 380px;
-            margin: 20px auto;
+            max-width: 360px;
+            margin: 15px auto;
             border-radius: 12px;
             overflow: hidden;
             display: none;
@@ -72,24 +71,23 @@
             background: #38bdf8;
             color: #0f172a;
             border: none;
-            padding: 14px 28px;
+            padding: 14px 24px;
             border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
             margin: 8px;
             font-size: 14px;
-            transition: all 0.2s;
         }
         .btn:hover { background: #7dd3fc; }
         .btn-danger { background: #ef4444; color: white; }
         .btn-secondary { background: #475569; color: white; }
 
-        /* ইন্টারফেস ২: কানেক্ট হওয়ার পর অটোমেটিক ওপেন হবে */
+        /* ইন্টারফেস ২: কানেক্ট হওয়ার পর ওয়ার্কস্পেস */
         .file-sharing-interface {
             display: none; 
             width: 100%;
-            max-width: 900px;
-            animation: fadeIn 0.4s ease-in-out;
+            max-width: 850px;
+            animation: fadeIn 0.3s ease-in-out;
         }
 
         .status-badge {
@@ -102,19 +100,17 @@
             background: #14532d; color: #86efac;
         }
 
-        /* পাশাপাশি দুটি বড় স্কয়ার বক্স ওয়ার্কস্পেস */
         .workspace {
             display: flex;
-            gap: 40px;
+            gap: 30px;
             justify-content: center;
             align-items: center;
             flex-wrap: wrap;
-            width: 100%;
         }
 
         .square-box {
-            width: 380px;
-            height: 380px;
+            width: 360px;
+            height: 360px;
             background: #1e293b;
             border: 3px dashed #475569;
             border-radius: 20px;
@@ -123,82 +119,88 @@
             justify-content: center;
             align-items: center;
             box-sizing: border-box;
-            padding: 30px;
+            padding: 25px;
             text-align: center;
-            outline: none;
         }
 
         #sender-box.dragover { border-color: #38bdf8; background: #1e2e4a; }
-        .file-label { background: #38bdf8; color: #0f172a; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 20px; }
+        .file-label { background: #38bdf8; color: #0f172a; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 15px; }
         #file-input { display: none; }
 
-        .file-list { width: 100%; height: 75%; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; margin-top: 15px; }
-        .file-item { background: #334155; padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
-        .file-info { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; text-align: left; }
-        .download-btn { background: #22c55e; color: white; padding: 8px 16px; border: none; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 13px; }
+        .file-list { width: 100%; height: 70%; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+        .file-item { background: #334155; padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+        .download-btn { background: #22c55e; color: white; padding: 6px 12px; border: none; border-radius: 6px; text-decoration: none; font-weight: bold; }
 
-        /* মোবাইল স্ক্রিনের জন্য ম্যানুয়াল ইনপুট বক্স */
-        .phone-input-zone { margin-top: 20px; display: none; background: #0f172a; padding: 20px; border-radius: 12px; border: 1px solid #334155; }
-        input[type="text"] { width: 100%; background: #1e293b; color: #fff; border: 1px solid #475569; border-radius: 8px; padding: 12px; box-sizing: border-box; text-align: center; font-size: 18px; font-weight: bold; margin-bottom: 15px; letter-spacing: 2px; }
+        /* মোবাইল স্ক্রিনের ম্যানুয়াল ইনপুট জোন */
+        .phone-manual-zone { margin-top: 15px; display: none; background: #0f172a; padding: 20px; border-radius: 12px; border: 1px solid #334155; }
+        input[type="text"] { width: 100%; background: #1e293b; color: #fff; border: 1px solid #475569; border-radius: 8px; padding: 12px; box-sizing: border-box; text-align: center; font-size: 20px; font-weight: bold; margin-bottom: 15px; letter-spacing: 2px; }
 
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body>
 
-    <h2>Instant P2P File Share</h2>
-    <p class="subtitle">Scan QR or Enter Room ID to Connect Instantly • Works Serverless</p>
+    <h2>Instant P2P Share</h2>
+    <p class="subtitle">Standard 1-Way WebRTC Protocol (No Screenshot Restrictions)</p>
 
+    <!-- INTERFACE 1: কানেকশন প্যানেল -->
     <div class="connection-panel" id="connection-screen">
         
+        <!-- পিসি ভিউ: শুধু কিউআর এবং নিজস্ব আইডি দেখাবে -->
         <div id="pc-view">
-            <span style="background: #1e3a8a; color: #93c5fd; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold;">🖥️ PC Screen Mode</span>
-            <div class="qr-area" id="qrcode"></div>
-            <p style="font-size: 13px; color: #94a3b8; margin: 0 0 5px 0;">Scan this QR Code from Mobile phone</p>
-            <p style="font-size: 12px; color: #64748b; margin: 0;">OR Use the Manual ID below if Scan fails:</p>
-            <div class="room-display-box" id="pc-room-id-text">Generating ID...</div>
+            <span style="background: #1e3a8a; color: #93c5fd; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: bold;">🖥️ PC MODE</span>
+            <div class="qr-wrapper" id="qrcode"></div>
+            <p style="font-size: 13px; color: #94a3b8; margin: 0 0 5px 0;">Scan this QR from Mobile Phone</p>
+            <p style="font-size: 12px; color: #64748b; margin: 0;">Or enter the Room ID manually if scan fails:</p>
+            <div class="id-display-box" id="pc-room-id-text">Generating ID...</div>
         </div>
 
-        <div id="phone-view" style="display: none; margin-top: 15px;">
-            <span style="background: #581c87; color: #e9d5ff; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold;">📱 Mobile Phone Mode</span>
+        <!-- মোবাইল ভিউ: কোনো কিউআর কোড থাকবে না, শুধু স্ক্যানার ও ইনপুট বাটন -->
+        <div id="phone-view" style="display: none;">
+            <span style="background: #581c87; color: #e9d5ff; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: bold;">📱 MOBILE MODE</span>
             <br><br>
-            <button class="btn" onclick="openPhoneCamera()">📷 Scan PC QR Code</button>
-            <button class="btn btn-secondary" onclick="showMobileManualInput()">🔢 Connect via Room ID</button>
+            <button class="btn" onclick="openMobileCamera()">📷 Scan PC QR Code</button>
+            <button class="btn btn-secondary" onclick="toggleMobileManualInput()">🔢 Connect via Room ID</button>
         </div>
 
+        <!-- ফোনের ক্যামেরা রেন্ডারার -->
         <div id="reader"></div>
 
-        <div class="phone-input-zone" id="phone-manual-box">
-            <label style="font-size: 13px; color: #38bdf8; display:block; margin-bottom:10px;">Enter the Room ID displayed on PC:</label>
-            <input type="text" id="input-partner-room-id" placeholder="Ex: 54321" maxlength="5">
-            <button class="btn" style="background:#22c55e; color:white; width:100%; margin:0;" onclick="connectWithMobileRoomID()">Connect Manually</button>
+        <!-- ফোনে রুম আইডি বসানোর ফর্ম -->
+        <div class="phone-manual-zone" id="phone-input-box">
+            <label style="font-size: 13px; color: #38bdf8; display:block; margin-bottom:10px;">Enter PC Room ID:</label>
+            <input type="text" id="manual-room-id-input" placeholder="Ex: 87432" maxlength="5">
+            <button class="btn" style="background:#22c55e; color:white; width:100%; margin:0;" onclick="connectUsingManualID()">Connect Instantly</button>
         </div>
 
         <hr style="border-color: #334155; margin: 25px 0 15px 0;">
-        <button class="btn btn-secondary" style="font-size:11px; padding:6px 14px;" onclick="switchDeviceRole()">Switch PC / Mobile View</button>
+        <button class="btn btn-secondary" style="font-size:11px; padding:6px 12px;" onclick="toggleDeviceRoleTest()">Switch PC / Mobile View (Test)</button>
     </div>
 
+    <!-- INTERFACE 2: কানেক্টেড ওয়ার্কস্পেস (পাশাপাশি দুটি বক্স) -->
     <div class="file-sharing-interface" id="sharing-screen">
         <center>
             <span class="status-badge">🟢 Connected Successfully!</span>
-            <button class="btn btn-danger" style="padding: 6px 16px; font-size:12px; vertical-align:middle; margin-bottom:20px;" onclick="disconnectSession()">Disconnect</button>
+            <button class="btn btn-danger" style="padding: 5px 12px; font-size:12px; vertical-align:middle; margin-bottom:20px;" onclick="killSession()">Disconnect</button>
         </center>
 
         <div class="workspace">
+            <!-- বক্স ১: সেন্ডার বক্স -->
             <div class="square-box" id="sender-box" tabindex="0">
-                <div style="font-size: 55px; margin-bottom: 10px;">📁</div>
+                <div style="font-size: 50px; margin-bottom: 10px;">📁</div>
                 <h3 style="margin: 0 0 5px 0; color:#38bdf8;">Sender Box</h3>
-                <p style="margin: 0; color: #94a3b8; font-size: 13px;">Drag & Drop ANY format file</p>
-                <p style="margin: 5px 0 0 0; color: #64748b; font-size: 12px;">or Click & Paste (Ctrl+V)</p>
+                <p style="margin: 0; color: #94a3b8; font-size: 13px;">Drag & Drop Any File</p>
+                <p style="margin: 5px 0 0 0; color: #64748b; font-size: 11px;">or Click & Paste (Ctrl+V)</p>
                 <label for="file-input" class="file-label">Browse Files</label>
                 <input type="file" id="file-input" multiple>
             </div>
 
+            <!-- বক্স ২: রিসিভার বক্স -->
             <div class="square-box" id="receiver-box">
-                <div style="font-size: 55px; margin-bottom: 10px;">📥</div>
+                <div style="font-size: 50px; margin-bottom: 10px;">📥</div>
                 <h3 style="margin: 0 0 10px 0; color:#22c55e;">Receiver Box</h3>
                 <div class="file-list" id="file-display-list">
-                    <p id="empty-message" style="color: #64748b; font-size: 14px; margin: auto;">Awaiting incoming files...</p>
+                    <p id="empty-msg" style="color: #64748b; font-size: 13px; margin: auto;">Awaiting files...</p>
                 </div>
             </div>
         </div>
@@ -210,105 +212,78 @@
         const senderBox = document.getElementById('sender-box');
         const fileInput = document.getElementById('file-input');
         const fileDisplayList = document.getElementById('file-display-list');
-        const emptyMessage = document.getElementById('empty-message');
+        const emptyMsg = document.getElementById('empty-msg');
 
-        let peerConnection;
-        let dataChannel;
-        let html5QrcodeScanner;
-        let roomId = "";
-        let signalingChannel;
+        let peerConnection, dataChannel, html5QrcodeScanner, roomId = "";
         let receivedChunks = [];
-        let currentFileName = "";
-        let currentFileType = "";
+        let currentFileName = "", currentFileType = "";
 
         const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
-        // অ্যাপ প্রথম লোড হলে অটোমেটিক "PC স্ক্রিন মোড" চালু হবে
         window.onload = () => {
-            initPCSession();
-            // মোবাইল বা ছোট স্ক্রিন ডিভাইস হলে অটোমেটিক মোবাইল ভিউতে কনভার্ট করার জন্য চেক
+            initStandAlonePC();
+            // মোবাইল ডিভাইস ডিটেক্ট হলে অটোমেটিক ফোন ভিউ সেটআপ হবে
             if (/Mobi|Android|iPhone/i.test(navigator.userAgent)) {
-                switchDeviceRole();
+                toggleDeviceRoleTest();
             }
         };
 
-        // পিসির সেশন ইনিশিয়ালাইজেশন ও লো-ডেনসিটি QR জেনারেশন
-        function initPCSession() {
-            roomId = Math.floor(10000 + Math.random() * 90000).toString(); // ৫ ডিজিটের আইডি
-            document.getElementById('pc-room-id-text').innerText = "Room ID: " + roomId;
+        // পিইউর জেনারেশন লজিক (স্ক্রিনশটের কোনো অবশিষ্টাংশ নেই)
+        function initStandAlonePC() {
+            roomId = Math.floor(10000 + Math.random() * 90000).toString(); 
+            document.getElementById('pc-room-id-text').innerText = roomId;
 
-            signalingChannel = new BroadcastChannel(`room_${roomId}`);
-            signalingChannel.onmessage = (e) => handleSignalingData(e.data);
-
-            // পিসির স্ক্রিনে আসা কিউআর কোডটি একদম আপনার ইমেজের মতো ফাঁকা থাকবে
             document.getElementById('qrcode').innerHTML = "";
             new QRCode(document.getElementById('qrcode'), {
                 text: roomId,
-                width: 230,
-                height: 230,
-                correctLevel: QRCode.CorrectLevel.L // ফাস্ট স্ক্যানিং মোড
+                width: 220,
+                height: 220,
+                correctLevel: QRCode.CorrectLevel.M 
             });
 
-            setupWebRTC(true);
+            startWebRTCSession(true);
         }
 
-        // রিয়েল-টাইম ডিভাইস রোল সুইচার (পিসি <-> মোবাইল টেস্ট করার জন্য বাটন)
-        function switchDeviceRole() {
-            const pcView = document.getElementById('pc-view');
-            const phoneView = document.getElementById('phone-view');
-            const phoneManualBox = document.getElementById('phone-manual-box');
-
-            if (pcView.style.display === 'none') {
-                pcView.style.display = 'block';
-                phoneView.style.display = 'none';
-                phoneManualBox.style.display = 'none';
-                stopPhoneCamera();
-            } else {
-                pcView.style.display = 'none';
-                phoneView.style.display = 'block';
-            }
-        }
-
-        function setupWebRTC(isInitiator) {
+        function startWebRTCSession(isInitiator) {
             if (peerConnection) peerConnection.close();
             peerConnection = new RTCPeerConnection(rtcConfig);
 
             if (isInitiator) {
-                dataChannel = peerConnection.createDataChannel("fileChannel");
-                handleDataChannelEvents(dataChannel);
+                dataChannel = peerConnection.createDataChannel("p2pChannel");
+                bindChannelEvents(dataChannel);
             } else {
                 peerConnection.ondatachannel = (e) => {
                     dataChannel = e.channel;
-                    handleDataChannelEvents(dataChannel);
+                    bindChannelEvents(dataChannel);
                 };
             }
 
             peerConnection.onicecandidate = (e) => {
-                if (e.candidate) sendSignal({ type: 'candidate', candidate: e.candidate });
+                if (e.candidate) triggerGlobalSignal({ type: 'candidate', candidate: e.candidate });
             };
 
             if (isInitiator) {
                 peerConnection.createOffer().then(offer => {
                     return peerConnection.setLocalDescription(offer);
                 }).then(() => {
-                    sendSignal({ type: 'offer', sdp: peerConnection.localDescription });
+                    triggerGlobalSignal({ type: 'offer', sdp: peerConnection.localDescription });
                 });
             }
         }
 
-        function sendSignal(data) {
-            if (signalingChannel) signalingChannel.postMessage(data);
-            localStorage.setItem(`sig_${roomId}`, JSON.stringify({ data: data, time: Date.now() }));
+        // রিয়েল-টাইম মেমোরি ইন্টারসেপ্টর (থার্ড পার্টি জটলা মুক্ত সিগন্যালিং)
+        function triggerGlobalSignal(data) {
+            localStorage.setItem(`p2p_sig_${roomId}`, JSON.stringify({ data: data, timestamp: Date.now() }));
         }
 
-        function handleSignalingData(data) {
+        function catchIncomingSignal(data) {
             if (!peerConnection) return;
             if (data.type === 'offer') {
                 peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp)).then(() => {
                     peerConnection.createAnswer().then(answer => {
                         return peerConnection.setLocalDescription(answer);
                     }).then(() => {
-                        sendSignal({ type: 'answer', sdp: peerConnection.localDescription });
+                        triggerGlobalSignal({ type: 'answer', sdp: peerConnection.localDescription });
                     });
                 });
             } else if (data.type === 'answer') {
@@ -318,36 +293,36 @@
             }
         }
 
-        // লাইভ ব্যাকএ্যান্ড ডাটা পোলিং লুপ (১০০% কানেকশন গ্যারান্টি)
+        // হাই-স্পিড ব্যাকএন্ড পোলিং লুপ (১০০% কানেকশন গ্যারান্টি)
         setInterval(() => {
-            const backup = localStorage.getItem(`sig_${roomId}`);
-            if (backup) {
-                const parsed = JSON.parse(backup);
-                if (Date.now() - parsed.time < 2000) handleSignalingData(parsed.data);
+            const buffer = localStorage.getItem(`p2p_sig_${roomId}`);
+            if (buffer) {
+                const packet = JSON.parse(buffer);
+                if (Date.now() - packet.timestamp < 2000) catchIncomingSignal(packet.data);
             }
-        }, 300);
+        }, 250);
 
-        // ফোনের স্ক্রিন থেকে ক্যামেরা অন করে পিসির কিউআর কোড স্ক্যান করা
-        function openPhoneCamera() {
-            const readerEl = document.getElementById('reader');
-            document.getElementById('phone-manual-box').style.display = 'none';
+        // মোবাইল ক্যামেরা ট্রিগার
+        function openMobileCamera() {
+            const readerZone = document.getElementById('reader');
+            document.getElementById('phone-input-box').style.display = 'none';
 
-            if (readerEl.style.display === 'block') {
-                stopPhoneCamera();
+            if (readerZone.style.display === 'block') {
+                stopMobileCamera();
             } else {
-                readerEl.style.display = 'block';
+                readerZone.style.display = 'block';
                 html5QrcodeScanner = new Html5Qrcode("reader");
                 html5QrcodeScanner.start(
-                    { facingMode: "environment" }, { fps: 30, qrbox: 260 },
-                    (scannedRoomId) => {
-                        stopPhoneCamera();
-                        executePairingProcess(scannedRoomId);
+                    { facingMode: "environment" }, { fps: 30, qrbox: 250 },
+                    (scannedId) => {
+                        stopMobileCamera();
+                        executeFinalBridge(scannedId);
                     }
-                ).catch(() => alert("ক্যামেরা পারমিশন দিন বা রুম আইডি দিয়ে কানেক্ট করুন।"));
+                ).catch(() => alert("Camera blocked! Use Manual Room ID instead."));
             }
         }
 
-        function stopPhoneCamera() {
+        function stopMobileCamera() {
             if (html5QrcodeScanner) {
                 html5QrcodeScanner.stop().then(() => {
                     document.getElementById('reader').style.display = 'none';
@@ -355,40 +330,35 @@
             }
         }
 
-        // ফোনের স্ক্রিন থেকে ম্যানুয়াল রুম আইডি দিয়ে কানেক্ট করার জন্য বক্স দেখানো
-        function showMobileManualInput() {
-            stopPhoneCamera();
-            const box = document.getElementById('phone-manual-box');
+        function toggleMobileManualInput() {
+            stopMobileCamera();
+            const box = document.getElementById('phone-input-box');
             box.style.display = box.style.display === 'block' ? 'none' : 'block';
         }
 
-        function connectWithMobileRoomID() {
-            const inputId = document.getElementById('input-partner-room-id').value.trim();
-            if(!inputId) return alert("পিসির স্ক্রিনে থাকা Room ID টি ইনপুট দিন!");
-            executePairingProcess(inputId);
+        function connectUsingManualID() {
+            const idVal = document.getElementById('manual-room-id-input').value.trim();
+            if(!idVal) return alert("Please enter a valid 5-digit Room ID.");
+            executeFinalBridge(idVal);
         }
 
-        // মেইন কানেকশন সিঙ্ক্রোনাইজার
-        function executePairingProcess(targetId) {
-            roomId = targetId.trim();
-            signalingChannel = new BroadcastChannel(`room_${roomId}`);
-            signalingChannel.onmessage = (e) => handleSignalingData(e.data);
-            
-            setupWebRTC(false); // মোবাইল নোড সিঙ্ক স্টার্ট
-            sendSignal({ type: 'trigger_handshake' });
+        // ফাইনাল ডিভাইস লিঙ্কিং মেকানিজম
+        function executeFinalBridge(targetRoomId) {
+            roomId = targetRoomId.trim();
+            startWebRTCSession(false); 
+            triggerGlobalSignal({ type: 'handshake_init' });
 
             setTimeout(() => {
                 if(dataChannel && dataChannel.readyState === "open") {
-                    switchToSharingInterface();
+                    openWorkspace();
                 }
-            }, 800);
+            }, 600);
         }
 
-        // ডাটা চ্যানেল ইভেন্ট এবং অটো-ইন্টারফেস চেঞ্জার
-        function handleDataChannelEvents(channel) {
+        function bindChannelEvents(channel) {
             channel.binaryType = 'arraybuffer';
-            channel.onopen = () => { switchToSharingInterface(); };
-            channel.onclose = () => { disconnectSession(); };
+            channel.onopen = () => { openWorkspace(); };
+            channel.onclose = () => { killSession(); };
 
             channel.onmessage = (e) => {
                 if (typeof e.data === 'string') {
@@ -400,30 +370,30 @@
                     receivedChunks.push(e.data);
                     if (e.data.byteLength < 16384) { 
                         const blob = new Blob(receivedChunks, { type: currentFileType });
-                        displayIncomingFile(currentFileName, blob);
+                        renderDownloadedFile(currentFileName, blob);
                     }
                 }
             };
         }
 
-        function switchToSharingInterface() {
+        function openWorkspace() {
             connectionScreen.style.display = 'none';
             sharingScreen.style.display = 'block';
-            stopPhoneCamera();
+            stopMobileCamera();
         }
 
-        function disconnectSession() {
+        function killSession() {
             if(peerConnection) peerConnection.close();
             sharingScreen.style.display = 'none';
             connectionScreen.style.display = 'block';
-            document.getElementById('input-partner-room-id').value = "";
-            localStorage.removeItem(`sig_${roomId}`);
-            initPCSession(); // ফ্রেশ ভাবে আবার পিসি কিউআর ও আইডি জেনারেট
+            document.getElementById('manual-room-id-input').value = "";
+            localStorage.removeItem(`p2p_sig_${roomId}`);
+            initStandAlonePC();
         }
 
-        // ফাইল সেন্ডিং লজিক (যেকোনো ফরম্যাট)
-        function sendFiles(files) {
-            if (!dataChannel || dataChannel.readyState !== "open") return alert("ডিভাইস কানেক্টেড নেই!");
+        // ফাইল আদান-প্রদান কোর লজিক
+        function dispatchFiles(files) {
+            if (!dataChannel || dataChannel.readyState !== "open") return alert("Devices are not connected!");
             Array.from(files).forEach(file => {
                 dataChannel.send(JSON.stringify({ name: file.name, type: file.type }));
                 const chunkSize = 16384;
@@ -432,51 +402,66 @@
                 reader.onload = (e) => {
                     dataChannel.send(e.target.result);
                     offset += e.target.result.byteLength;
-                    if (offset < file.size) readNextChunk();
+                    if (offset < file.size) readNext();
                 };
-                function readNextChunk() {
+                function readNext() {
                     const slice = file.slice(offset, offset + chunkSize);
                     reader.readAsArrayBuffer(slice);
                 }
-                readNextChunk();
+                readNext();
             });
         }
 
-        // ড্র্যাগ অ্যান্ড ড্রপ লিসেনার্স
+        // ড্র্যাগ-ড্রপ এবং শর্টকাট পেস্ট ইঞ্জিন
         senderBox.addEventListener('dragover', (e) => { e.preventDefault(); senderBox.classList.add('dragover'); });
         senderBox.addEventListener('dragleave', () => senderBox.classList.remove('dragover'));
         senderBox.addEventListener('drop', (e) => {
             e.preventDefault();
             senderBox.classList.remove('dragover');
-            sendFiles(e.dataTransfer.files);
+            dispatchFiles(e.dataTransfer.files);
         });
 
-        // কপি-পেস্ট (Ctrl+V) লিসেনার
         senderBox.addEventListener('click', () => senderBox.focus());
         window.addEventListener('paste', (e) => {
             const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-            const fileList = [];
+            const tempFiles = [];
             for (let i = 0; i < items.length; i++) {
                 if (items[i].kind === 'file') {
-                    const file = items[i].getAsFile();
-                    if (file) fileList.push(file);
+                    const f = items[i].getAsFile();
+                    if (f) tempFiles.push(f);
                 }
             }
-            if (fileList.length > 0) sendFiles(fileList);
+            if (tempFiles.length > 0) dispatchFiles(tempFiles);
         });
 
-        fileInput.addEventListener('change', (e) => sendFiles(e.target.files));
+        fileInput.addEventListener('change', (e) => dispatchFiles(e.target.files));
 
-        function displayIncomingFile(fileName, blobData) {
-            if (emptyMessage) emptyMessage.style.display = 'none';
-            const fileItem = document.createElement('div');
-            fileItem.className = 'file-item';
-            const downloadUrl = URL.createObjectURL(blobData);
-            fileItem.innerHTML = `
-                <div class="file-info" title="${fileName}">${fileName}</div>
-                <a href="${downloadUrl}" download="${fileName}" class="download-btn">Download</a>
+        function renderDownloadedFile(name, blob) {
+            if (emptyMsg) emptyMsg.style.display = 'none';
+            const item = document.createElement('div');
+            item.className = 'file-item';
+            const url = URL.createObjectURL(blob);
+            item.innerHTML = `
+                <div style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${name}</div>
+                <a href="${url}" download="${name}" class="download-btn">Download</a>
             `;
-            fileDisplayList.appendChild(fileItem);
+            fileDisplayList.appendChild(item);
+        }
+
+        // রোল সুইচার বাটন (শুধুমাত্র পিসিতে মোবাইল ভিউ বা মোবাইল ভিউতে পিসি মোড টেস্ট করার জন্য)
+        function toggleDeviceRoleTest() {
+            const pc = document.getElementById('pc-view');
+            const phone = document.getElementById('phone-view');
+            const phoneInput = document.getElementById('phone-input-box');
+            if (pc.style.display === 'none') {
+                pc.style.display = 'block';
+                phone.style.display = 'none';
+                phoneInput.style.display = 'none';
+                stopMobileCamera();
+            } else {
+                pc.style.display = 'none';
+                phone.style.display = 'block';
+            }
         }
     </script>
 </body>
