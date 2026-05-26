@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Instant Offline P2P File Share</title>
+    <title>Instant Serverless P2P File Share</title>
+    <!-- GitHub Pages এবং অফলাইন সাপোর্টের জন্য সরাসরি CDN লাইব্রেরি -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     
@@ -113,7 +114,6 @@
         .file-info { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
         .download-btn { background: #22c55e; color: white; padding: 6px 12px; border: none; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 12px; }
 
-        /* টোকেন বক্স এরিয়া */
         .token-container {
             margin-top: 15px;
             background: #0f172a;
@@ -138,39 +138,44 @@
 <body>
 
     <h2>Instant P2P File Share</h2>
-    <p class="subtitle">If QR scanning fails, use the Copy-Paste Token option below for instant connection!</p>
+    <p class="subtitle">Scan QR to connect. Device B will auto-generate partner token after scanning Device A!</p>
 
+    <!-- কানেকশন প্যানেল -->
     <div class="connection-panel">
         <span id="connection-status" class="status-badge disconnected">🔴 Disconnected</span>
         
         <div>
             <button class="btn btn-primary" onclick="startAsHost()">1. Init Connection (Device A)</button>
-            <button class="btn btn-primary" onclick="startAsReceiver()">2. Join Connection (Device B)</button>
+            <button class="btn btn-primary" onclick="startAsReceiver()">2. Scan QR (Device B)</button>
         </div>
 
+        <!-- QR Code Display -->
         <div id="qr-wrapper" style="display:none;">
             <div class="qr-area" id="qrcode"></div>
-            <p style="font-size: 12px; color: #94a3b8; margin: 5px 0;">Scan this QR or copy the Token below:</p>
+            <p id="qr-instruction" style="font-size: 12px; color: #94a3b8; margin: 5px 0;">Scan this QR from the other device</p>
         </div>
 
+        <!-- Camera Scanner Display -->
         <div id="scanner-wrapper" style="display:none;">
             <div id="reader"></div>
             <button class="btn" onclick="stopCamera()">Stop Camera</button>
         </div>
 
+        <!-- টোকেন ব্যাকআপ এরিয়া -->
         <div class="token-container" id="token-area" style="display: none;">
-            <label id="token-label" style="font-size: 12px; color: #38bdf8; display:block; margin-bottom:5px;">Connection Token:</label>
-            <textarea id="token-output" rows="3" readonly onclick="this.select()"></textarea>
+            <label style="font-size: 12px; color: #38bdf8; display:block; margin-bottom:5px;">Your Connection Token:</label>
+            <textarea id="token-output" rows="2" readonly onclick="this.select()"></textarea>
             <button class="btn" id="copy-btn" onclick="copyToken()">Copy Token</button>
             
-            <hr style="border-color: #334155; margin: 15px 0;">
+            <hr style="border-color: #334155; margin: 10px 0;">
             
-            <label style="font-size: 12px; color: #a855f7; display:block; margin-bottom:5px;">Paste Partner's Token Here:</label>
-            <textarea id="token-input" rows="3" placeholder="Paste the token generated from the other device here..."></textarea>
-            <button class="btn btn-success" onclick="handleManualToken()">Connect Devices</button>
+            <label style="font-size: 12px; color: #a855f7; display:block; margin-bottom:5px;">Manual Backup: Paste Partner's Token Here</label>
+            <textarea id="token-input" rows="2" placeholder="Paste token manually if scanning fails..."></textarea>
+            <button class="btn btn-success" onclick="handleManualToken()">Connect Manually</button>
         </div>
     </div>
 
+    <!-- ওয়ার্কস্পেস (পাশাপাশি দুইটি স্কয়ার বক্স) -->
     <div class="workspace">
         <div class="square-box" id="sender-box" tabindex="0">
             <div style="font-size: 40px; margin-bottom: 10px;">📁</div>
@@ -198,6 +203,7 @@
         const tokenArea = document.getElementById('token-area');
         const tokenOutput = document.getElementById('token-output');
         const tokenInput = document.getElementById('token-input');
+        const qrInstruction = document.getElementById('qr-instruction');
 
         let peerConnection;
         let dataChannel;
@@ -206,12 +212,14 @@
         let currentFileName = "";
         let currentFileType = "";
 
-        // ব্রাউজারের ডিফল্ট লোকাল কানেকশন কনফিগারেশন
+        // লোকাল নেটওয়ার্কে অফলাইনে কাজ করার জন্য কনফিগারেশন
         const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }; 
 
-        // ১. ডিভাইস এ (পিসি/সেন্ডার)
+        // ১. ডিভাইস এ (পিসি/সেন্ডার) কানেকশন শুরু করার জন্য
         function startAsHost() {
             showTokenArea();
+            qrInstruction.innerText = "Device B দিয়ে এই QR কোডটি স্ক্যান করুন।";
+            
             peerConnection = new RTCPeerConnection(rtcConfig);
             dataChannel = peerConnection.createDataChannel("fileTransfer");
             setupDataChannelEvents(dataChannel);
@@ -226,7 +234,7 @@
             peerConnection.createOffer().then(offer => peerConnection.setLocalDescription(offer));
         }
 
-        // ২. ডিভাইস বি (মোবাইল/রিসিভার)
+        // ২. ডিভাইস বি (মোবাইল) ক্যামেরা দিয়ে স্ক্যান শুরু করার জন্য
         function startAsReceiver() {
             showTokenArea();
             document.getElementById('scanner-wrapper').style.display = 'block';
@@ -237,7 +245,6 @@
                 setupDataChannelEvents(dataChannel);
             };
 
-            // ক্যামেরা স্ক্যানার শুরু করা
             html5QrcodeScanner = new Html5Qrcode("reader");
             html5QrcodeScanner.start(
                 { facingMode: "environment" }, 
@@ -246,39 +253,43 @@
                     processScannedToken(qrText);
                     stopCamera();
                 }
-            ).catch(err => console.log("Camera alternative: Manual Copy-Paste enabled."));
+            ).catch(err => console.log("Camera failed. Switching to manual backup mode."));
         }
 
-        // স্ক্যান করা বা পেস্ট করা টোকেন প্রসেস করা
+        // ৩. স্ক্যান করা বা ম্যানুয়ালি পেস্ট করা টোকেন প্রসেস করার ফাংশন
         function processScannedToken(qrText) {
             if(qrText.startsWith("OFFER:")) {
+                // ডিভাইস B সফলভাবে ডিভাইস A-কে রিড করেছে
                 const token = atob(qrText.replace("OFFER:", ""));
                 peerConnection.setRemoteDescription(new RTCSessionDescription(JSON.parse(token)))
                     .then(() => peerConnection.createAnswer())
                     .then(answer => peerConnection.setLocalDescription(answer))
                     .then(() => {
+                        // AUTOMATIC PART: ডিভাইস B-তে অটোমেটিকভাবে পাল্টা টোকেন ও QR জেনারেট হবে
                         peerConnection.onicecandidate = (e) => {
                             if (!e.candidate) {
                                 const answerToken = btoa(JSON.stringify(peerConnection.localDescription));
                                 tokenOutput.value = "ANSWER:" + answerToken;
-                                generateQR("ANSWER:" + answerToken);
+                                qrInstruction.innerText = "অটোমেটিক পার্টনার টোকেন রেডি! এবার এটি Device A দিয়ে স্ক্যান করুন।";
+                                generateQR("ANSWER:" + answerToken); 
                             }
                         };
                     });
             } else if(qrText.startsWith("ANSWER:")) {
+                // ডিভাইস A যখন ডিভাইস B-এর তৈরি করা অটোমেটিক QR কোডটি স্ক্যান করবে
                 const token = atob(qrText.replace("ANSWER:", ""));
                 peerConnection.setRemoteDescription(new RTCSessionDescription(JSON.parse(token)));
             }
         }
 
-        // ম্যানুয়াল কানেকশন বাটন (কপি-পেস্টের মাধ্যমে)
+        // ম্যানুয়াল কানেকশন ব্যাকআপ (যদি স্ক্যান কোনো ডিভাইসে মিস হয়)
         function handleManualToken() {
             const rawToken = tokenInput.value.trim();
-            if(!rawToken) return alert("Please paste the token first!");
+            if(!rawToken) return alert("অনুগ্রহ করে বক্সে টোকেনটি পেস্ট করুন!");
             processScannedToken(rawToken);
         }
 
-        // QR কোড তৈরি করা (সাইজ ছোট এবং অপ্টিমাইজড করা হয়েছে)
+        // QR কোড জেনারেশন (সহজে রিড করার জন্য অপ্টিমাইজড)
         function generateQR(text) {
             document.getElementById('qr-wrapper').style.display = 'block';
             document.getElementById('qrcode').innerHTML = "";
@@ -286,14 +297,12 @@
                 text: text,
                 width: 200,
                 height: 200,
-                correctLevel : QRCode.CorrectLevel.L // ডাটা ডেনসিটি কমানোর জন্য Low correction level
+                correctLevel : QRCode.CorrectLevel.L
             });
         }
 
-        function showTokenArea() {
-            tokenArea.style.display = 'block';
-        }
-
+        function showTokenArea() { tokenArea.style.display = 'block'; }
+        
         function stopCamera() {
             if(html5QrcodeScanner) {
                 html5QrcodeScanner.stop().then(() => {
@@ -310,7 +319,7 @@
             setTimeout(() => btn.innerText = "Copy Token", 2000);
         }
 
-        // ডেটা চ্যানেল ইভেন্ট (কানেকশন সাকসেস)
+        // ডেটা চ্যানেল কানেকশন ও ফাইল রিসিভ হ্যান্ডলার
         function setupDataChannelEvents(channel) {
             channel.binaryType = 'arraybuffer';
             channel.onopen = () => {
@@ -340,10 +349,10 @@
             };
         }
 
-        // ফাইল সেন্ডিং লজিক
+        // ফাইল ড্রপ বা সিলেক্ট হলে পাঠানোর লজিক
         function handleFiles(files) {
             if (!dataChannel || dataChannel.readyState !== "open") {
-                return alert("Devices are not connected yet! Please link them using token/QR code.");
+                return alert("ডিভাইস এখনো কানেক্ট হয়নি! অনুগ্রহ করে টোকেন বা QR কোড ব্যবহার করুন।");
             }
             Array.from(files).forEach(file => {
                 dataChannel.send(JSON.stringify({ name: file.name, type: file.type }));
@@ -363,7 +372,7 @@
             });
         }
 
-        // UI লিসেনার
+        // UI ড্র্যাগ-অ্যান্ড-ড্রপ এবং কপি-পেস্ট লিসেনার
         fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
         senderBox.addEventListener('dragover', (e) => { e.preventDefault(); senderBox.classList.add('dragover'); });
         senderBox.addEventListener('dragleave', () => senderBox.classList.remove('dragover'));
