@@ -3,14 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Instant QR File Share</title>
+    <title>Instant Offline P2P File Share</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    
     <style>
-        /* মূল পেজের ডিজাইন */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 20px;
-            background-color: #0f172a; /* ডার্ক থিম */
+            background-color: #0f172a;
             color: #f8fafc;
             display: flex;
             flex-direction: column;
@@ -19,19 +21,10 @@
             box-sizing: border-box;
         }
 
-        h2 {
-            margin-bottom: 5px;
-            color: #38bdf8;
-        }
+        h2 { margin-bottom: 5px; color: #38bdf8; }
+        .subtitle { color: #94a3b8; margin-bottom: 25px; font-size: 14px; text-align: center; }
 
-        .subtitle {
-            color: #94a3b8;
-            margin-bottom: 25px;
-            font-size: 14px;
-            text-align: center;
-        }
-
-        /* কানেকশন (QR Code) এরিয়া */
+        /* কানেকশন প্যানেল */
         .connection-panel {
             background: #1e293b;
             padding: 20px;
@@ -40,34 +33,62 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             margin-bottom: 30px;
             width: 100%;
-            max-width: 400px;
+            max-width: 450px;
             box-sizing: border-box;
         }
 
-        .qr-placeholder {
-            width: 180px;
-            height: 180px;
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+        .disconnected { background: #7f1d1d; color: #fca5a5; }
+        .connected { background: #14532d; color: #86efac; }
+
+        .qr-area {
             background: #fff;
+            padding: 15px;
             margin: 15px auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: inline-block;
             border-radius: 8px;
-            color: #000;
+        }
+        
+        #reader {
+            width: 100%;
+            max-width: 300px;
+            margin: 15px auto;
+            border-radius: 8px;
+            overflow: hidden;
         }
 
-        /* পাশাপাশি দুটি স্কয়ার বক্সের ওয়ার্কস্পেস */
+        .btn {
+            background: #475569;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            margin: 5px;
+            font-size: 13px;
+        }
+        .btn-primary { background: #38bdf8; color: #0f172a; }
+        .btn-primary:hover { background: #7dd3fc; }
+
+        /* ওয়ার্কস্পেস */
         .workspace {
             display: flex;
             gap: 30px;
             justify-content: center;
             align-items: center;
-            flex-wrap: wrap; /* মোবাইল স্ক্রিনের জন্য নিচে নেমে যাবে */
+            flex-wrap: wrap;
             width: 100%;
             max-width: 800px;
         }
 
-        /* স্কয়ার বক্সের কমন স্টাইল */
         .square-box {
             width: 320px;
             height: 320px;
@@ -86,14 +107,11 @@
             outline: none;
         }
 
-        /* ড্র্যাগ ওভার বা ফাইল সিলেক্ট হলে বর্ডারের অ্যানিমেশন */
         #sender-box.dragover {
             border-color: #38bdf8;
             background: #1e2e4a;
-            box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
         }
 
-        /* ফাইল ইনপুট হাইড করে সুন্দর বাটন তৈরি */
         .file-label {
             background: #38bdf8;
             color: #0f172a;
@@ -102,18 +120,10 @@
             cursor: pointer;
             font-weight: 600;
             margin-top: 15px;
-            transition: 0.2s;
         }
 
-        .file-label:hover {
-            background: #7dd3fc;
-        }
+        #file-input { display: none; }
 
-        #file-input {
-            display: none;
-        }
-
-        /* রিসিভড ফাইলের লিস্ট এবং ডাউনলোড বাটন */
         .file-list {
             width: 100%;
             height: 70%;
@@ -132,7 +142,6 @@
             justify-content: space-between;
             align-items: center;
             font-size: 14px;
-            text-align: left;
         }
 
         .file-info {
@@ -140,7 +149,6 @@
             overflow: hidden;
             text-overflow: ellipsis;
             max-width: 160px;
-            color: #e2e8f0;
         }
 
         .download-btn {
@@ -153,40 +161,46 @@
             text-decoration: none;
             font-weight: bold;
             font-size: 12px;
-            transition: background 0.2s;
         }
 
-        .download-btn:hover {
-            background: #4ade80;
-        }
-
-        .status-text {
-            color: #94a3b8;
-            font-size: 14px;
-            margin: auto;
-        }
+        /* টেক্সট এরিয়া হাইড রাখার জন্য (কানেকশন ডাটা কপি করার ব্যাকআপ অপশন) */
+        #token-area { display: none; width: 100%; margin-top: 10px; }
     </style>
 </head>
 <body>
 
     <h2>Instant P2P File Share</h2>
-    <p class="subtitle">Computer to Mobile / Mobile to Computer Instant Transfer</p>
+    <p class="subtitle">Pure GitHub Project - Completely Serverless & Offline Supported</p>
 
     <div class="connection-panel">
-        <span id="connection-status" style="color: #ef4444; font-weight: bold;">🔴 Disconnected</span>
-        <div class="qr-placeholder" id="qr-code-container">
-            <span style="color: #64748b; font-size: 12px;">Generating QR Code...</span>
+        <span id="connection-status" class="status-badge disconnected">🔴 Disconnected</span>
+        
+        <div>
+            <button class="btn btn-primary" onclick="startAsHost()">1. Create QR (PC/Sender)</button>
+            <button class="btn" onclick="startAsReceiver()">2. Scan QR (Mobile/Receiver)</button>
         </div>
-        <p style="font-size: 13px; margin: 0; color: #94a3b8;">Scan this code from another device to connect</p>
+
+        <div id="qr-wrapper" style="display:none;">
+            <div class="qr-area" id="qrcode"></div>
+            <p style="font-size: 12px; color: #94a3b8;">Scan this from the second device</p>
+        </div>
+
+        <div id="scanner-wrapper" style="display:none;">
+            <div id="reader"></div>
+            <p style="font-size: 12px; color: #94a3b8;">Align the QR code inside the box</p>
+        </div>
+
+        <div id="token-area">
+            <textarea id="token-input" rows="3" placeholder="Paste response token here if scanning fails..." style="width:100%; background:#0f172a; color:#fff; border:1px solid #475569; border-radius:6px; padding:5px;"></textarea>
+            <button class="btn" onclick="handleManualToken()">Connect Manually</button>
+        </div>
     </div>
 
     <div class="workspace">
-        
         <div class="square-box" id="sender-box" tabindex="0">
             <div style="font-size: 40px; margin-bottom: 10px;">📁</div>
             <p style="margin: 0 0 5px 0; font-weight: 500;">Drag & Drop files here</p>
             <p style="margin: 0; color: #64748b; font-size: 13px;">or Click & Paste (Ctrl+V) anywhere</p>
-            
             <label for="file-input" class="file-label">Browse Files</label>
             <input type="file" id="file-input" multiple>
         </div>
@@ -194,100 +208,209 @@
         <div class="square-box" id="receiver-box">
             <div style="font-size: 40px; margin-bottom: 10px;">📥</div>
             <p style="margin: 0 0 10px 0; font-weight: 500;">Received Files</p>
-            
             <div class="file-list" id="file-display-list">
-                <p class="status-text" id="empty-message">No files received yet.</p>
+                <p id="empty-message" style="color: #94a3b8; font-size: 14px; margin: auto;">No files received yet.</p>
             </div>
         </div>
-
     </div>
 
     <script>
-        // DOM এলিমেন্টগুলো সিলেক্ট করা
         const senderBox = document.getElementById('sender-box');
         const fileInput = document.getElementById('file-input');
         const fileDisplayList = document.getElementById('file-display-list');
         const emptyMessage = document.getElementById('empty-message');
+        const statusBadge = document.getElementById('connection-status');
 
-        // ফাইল প্রসেস করার মূল ফাংশন
+        let peerConnection;
+        let dataChannel;
+        let receivedChunks = [];
+        let currentFileName = "";
+        let currentFileType = "";
+
+        // WebRTC ডিফল্ট কনফিগারেশন (অফলাইনের জন্য কোনো STUN/TURN সার্ভার লাগবে না)
+        const rtcConfig = { iceServers: [] }; 
+
+        // ১. হোস্ট বা সেন্ডার হিসেবে শুরু করা (সাধারণত পিসিতে)
+        function startAsHost() {
+            document.getElementById('qr-wrapper').style.display = 'block';
+            document.getElementById('scanner-wrapper').style.display = 'none';
+            document.getElementById('token-area').style.display = 'block';
+
+            peerConnection = new RTCPeerConnection(rtcConfig);
+            dataChannel = peerConnection.createDataChannel("fileTransfer");
+            
+            setupDataChannelEvents(dataChannel);
+
+            peerConnection.onicecandidate = (e) => {
+                if (!e.candidate) {
+                    // সিগন্যালিং টোকেন জেনারেট করে QR কোড বানানো
+                    const offerToken = btoa(JSON.stringify(peerConnection.localDescription));
+                    document.getElementById('qrcode').innerHTML = "";
+                    new QRCode(document.getElementById('qrcode'), {
+                        text: "OFFER:" + offerToken,
+                        width: 160,
+                        height: 160
+                    });
+                }
+            };
+
+            peerConnection.createOffer().then(offer => peerConnection.setLocalDescription(offer));
+        }
+
+        // ২. রিসিভার বা ক্লায়েন্ট হিসেবে শুরু করা (সাধারণত মোবাইলে)
+        function startAsReceiver() {
+            document.getElementById('scanner-wrapper').style.display = 'block';
+            document.getElementById('qr-wrapper').style.display = 'none';
+
+            peerConnection = new RTCPeerConnection(rtcConfig);
+            
+            peerConnection.ondatachannel = (e) => {
+                dataChannel = e.channel;
+                setupDataChannelEvents(dataChannel);
+            };
+
+            // ক্যামেরা স্ক্যানার চালু করা
+            const html5QrcodeScanner = new Html5Qrcode("reader");
+            html5QrcodeScanner.start(
+                { facingMode: "environment" }, 
+                { fps: 10, qrbox: 250 },
+                (qrText) => {
+                    html5QrcodeScanner.stop();
+                    document.getElementById('scanner-wrapper').style.display = 'none';
+                    
+                    if(qrText.startsWith("OFFER:")) {
+                        const token = atob(qrText.replace("OFFER:", ""));
+                        peerConnection.setRemoteDescription(new RTCSessionDescription(JSON.parse(token)))
+                            .then(() => peerConnection.createAnswer())
+                            .then(answer => peerConnection.setLocalDescription(answer))
+                            .then(() => {
+                                peerConnection.onicecandidate = (e) => {
+                                    if (!e.candidate) {
+                                        const answerToken = btoa(JSON.stringify(peerConnection.localDescription));
+                                        document.getElementById('qr-wrapper').style.display = 'block';
+                                        document.getElementById('qrcode').innerHTML = "";
+                                        new QRCode(document.getElementById('qrcode'), {
+                                            text: "ANSWER:" + answerToken,
+                                            width: 160,
+                                            height: 160
+                                        });
+                                    }
+                                };
+                            });
+                    } else if(qrText.startsWith("ANSWER:")) {
+                        const token = atob(qrText.replace("ANSWER:", ""));
+                        peerConnection.setRemoteDescription(new RTCSessionDescription(JSON.parse(token)));
+                    }
+                }
+            ).catch(err => alert("Camera permission error: " + err));
+        }
+
+        // ম্যানুয়াল টোকেন দিয়ে কানেক্ট করার ব্যবস্থা (ব্যাকআপ)
+        function handleManualToken() {
+            const rawToken = document.getElementById('token-input').value.trim();
+            if(!rawToken) return;
+            const token = atob(rawToken.replace("ANSWER:", "").replace("OFFER:", ""));
+            peerConnection.setRemoteDescription(new RTCSessionDescription(JSON.parse(token)));
+        }
+
+        // ৩. ডেটা চ্যানেল ইভেন্ট হ্যান্ডলার (কানেকশন স্ট্যাটাস এবং ফাইল রিসিভ)
+        function setupDataChannelEvents(channel) {
+            channel.binaryType = 'arraybuffer';
+            
+            channel.onopen = () => {
+                statusBadge.className = "status-badge connected";
+                statusBadge.innerText = "🟢 Connected";
+                document.getElementById('qr-wrapper').style.display = 'none';
+                document.getElementById('token-area').style.display = 'none';
+            };
+
+            channel.onclose = () => {
+                statusBadge.className = "status-badge disconnected";
+                statusBadge.innerText = "🔴 Disconnected";
+            };
+
+            // অন্য ডিভাইস থেকে ফাইল এলে এখানে রিসিভ হবে
+            channel.onmessage = (e) => {
+                if (typeof e.data === 'string') {
+                    // ফাইলের মেটাডেটা (নাম ও টাইপ) এসেছে
+                    const meta = JSON.parse(e.data);
+                    currentFileName = meta.name;
+                    currentFileType = meta.type;
+                    receivedChunks = [];
+                } else {
+                    // ফাইলের বাইনারি ডাটা চাঙ্ক বা টুকরো এসেছে
+                    receivedChunks.push(e.data);
+                    
+                    // ফাইল সম্পূর্ণ চলে এলে তা জোড়া লাগিয়ে ডাউনলোড বাটন দেওয়া হবে
+                    if (e.data.byteLength < 16384) { // শেষ টুকরো চেনার সহজ উপায়
+                        const blob = new Blob(receivedChunks, { type: currentFileType });
+                        displayReceivedFile(currentFileName, blob);
+                    }
+                }
+            };
+        }
+
+        // ৪. ফাইল পাঠানোর মেকানিজম (টুকরো টুকরো করে পাঠানো বা Chunks)
         function handleFiles(files) {
-            if (files.length === 0) return;
-
-            // "No files received yet" লেখাটি হাইড করা
-            if (emptyMessage) {
-                emptyMessage.style.display = 'none';
+            if (!dataChannel || dataChannel.readyState !== "open") {
+                alert("Please connect the devices first using QR Code!");
+                return;
             }
 
             Array.from(files).forEach(file => {
-                console.log("File detected:", file.name, "Size:", file.size, "Type:", file.type);
-                
-                // সাময়িকভাবে একই ডিভাইসে ফাইল ডাউনলোডের টেস্ট করা হচ্ছে
-                // (WebRTC যুক্ত করার পর এই ফাংশনটি রিসিভার ডিভাইসে কল হবে)
-                displayReceivedFile(file.name, file);
+                // প্রথমে ফাইলের মেটাডেটা পাঠানো
+                dataChannel.send(JSON.stringify({ name: file.name, type: file.type }));
+
+                // ফাইলকে টুকরো করে রিড করা ও পাঠানো (Chunking: 16KB per chunk)
+                const chunkSize = 16384;
+                const reader = new FileReader();
+                let offset = 0;
+
+                reader.onload = (e) => {
+                    dataChannel.send(e.target.result);
+                    offset += e.target.result.byteLength;
+                    if (offset < file.size) {
+                        readNextChunk();
+                    }
+                };
+
+                function readNextChunk() {
+                    const slice = file.slice(offset, offset + chunkSize);
+                    reader.readAsArrayBuffer(slice);
+                }
+
+                readNextChunk();
             });
         }
 
-        // ১. ব্রাউজ ফাইল (Browse Button) ইভেন্ট
-        fileInput.addEventListener('change', (e) => {
-            handleFiles(e.target.files);
-        });
-
-        // ২. ড্র্যাগ অ্যান্ড ড্রপ (Drag & Drop) ইভেন্ট হ্যান্ডলার
-        senderBox.addEventListener('dragover', (e) => {
-            e.preventDefault(); // ব্রাউজারের ফাইল ওপেন করার ডিফল্ট আচরণ বন্ধ করা
-            senderBox.classList.add('dragover');
-        });
-
-        senderBox.addEventListener('dragleave', () => {
-            senderBox.classList.remove('dragover');
-        });
-
-        senderBox.addEventListener('drop', (e) => {
-            e.preventDefault();
-            senderBox.classList.remove('dragover');
-            
-            const files = e.dataTransfer.files;
-            handleFiles(files);
-        });
-
-        // ৩. কপি এবং পেস্ট (Copy & Paste) ইভেন্ট হ্যান্ডলার
-        // বক্সে ক্লিক করলে সেটি ফোকাস হবে যাতে পেস্ট কমান্ড কাজ করে
-        senderBox.addEventListener('click', () => {
-            senderBox.focus();
-        });
-
+        // ৫. UI ইভেন্ট লিসেনারসমূহ (আগের মতই)
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+        senderBox.addEventListener('dragover', (e) => { e.preventDefault(); senderBox.classList.add('dragover'); });
+        senderBox.addEventListener('dragleave', () => senderBox.classList.remove('dragover'));
+        senderBox.addEventListener('drop', (e) => { e.preventDefault(); senderBox.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
+        senderBox.addEventListener('click', () => senderBox.focus());
+        
         window.addEventListener('paste', (e) => {
-            // চেক করা হচ্ছে ক্লিপবোর্ডে কোনো ফাইল আছে কিনা
             const items = (e.clipboardData || e.originalEvent.clipboardData).items;
             const fileList = [];
-
             for (let i = 0; i < items.length; i++) {
                 if (items[i].kind === 'file') {
                     const file = items[i].getAsFile();
                     if (file) fileList.push(file);
                 }
             }
-
-            // যদি ফাইল পাওয়া যায় তবে প্রসেস করা হবে
-            if (fileList.length > 0) {
-                handleFiles(fileList);
-            }
+            if (fileList.length > 0) handleFiles(fileList);
         });
 
-        // ৪. ডান পাশের বক্সে ডাউনলোডের লিঙ্ক তৈরি ও ডিসপ্লে করার ফাংশন
-        function displayReceivedFile(fileName, fileData) {
+        function displayReceivedFile(fileName, blobData) {
+            if (emptyMessage) emptyMessage.style.display = 'none';
             const fileItem = document.createElement('div');
             fileItem.className = 'file-item';
-
-            // ফাইলের জন্য একটি মেমরি লিঙ্ক (Blob URL) তৈরি করা
-            const blob = new Blob([fileData], { type: fileData.type });
-            const downloadUrl = URL.createObjectURL(blob);
-
+            const downloadUrl = URL.createObjectURL(blobData);
             fileItem.innerHTML = `
                 <div class="file-info" title="${fileName}">${fileName}</div>
                 <a href="${downloadUrl}" download="${fileName}" class="download-btn">Download</a>
             `;
-
             fileDisplayList.appendChild(fileItem);
         }
     </script>
